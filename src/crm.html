@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hasli Transport Roat — CRM</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#F0F4F8;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* Header */
+.hdr{background:#1F3864;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.hdr-left .title{color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px}
+.hdr-left .sub{color:#93B5D5;font-size:12px;margin-top:2px}
+.tab-bar-outer{display:flex;gap:2px;background:rgba(255,255,255,.12);border-radius:8px;padding:3px}
+.tab{padding:6px 16px;font-size:12px;font-weight:600;color:#93B5D5;cursor:pointer;border-radius:6px;border:none;background:none;transition:.15s}
+.tab.on{background:#fff;color:#1F3864}
+.tab:hover:not(.on){color:#fff}
+
+/* Stats bar */
+.stat-bar{background:#16305A;padding:8px 20px;display:flex;gap:24px;flex-wrap:wrap}
+.stat{text-align:center;min-width:50px}
+.stat-n{font-size:20px;font-weight:700;color:#fff;line-height:1.1}
+.stat-l{font-size:10px;color:#93B5D5;margin-top:1px}
+
+/* Toast */
+.toast{position:fixed;top:16px;right:20px;background:#166534;color:#fff;font-size:12px;font-weight:600;padding:8px 16px;border-radius:8px;opacity:0;transition:opacity .3s;z-index:9999;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Filters */
+.filters{background:#fff;padding:10px 20px;border-bottom:1px solid #E5E7EB;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters input,.filters select{font-size:12px;padding:6px 10px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;color:#111;min-width:120px;outline:none}
+.filters input:focus,.filters select:focus{border-color:#1F3864;box-shadow:0 0 0 2px rgba(31,56,100,.15)}
+.filters input{flex:1;min-width:160px}
+.fcnt{font-size:11px;color:#9CA3AF;margin-left:auto;white-space:nowrap}
+
+/* Views */
+.view{display:none}
+.view.active{display:block}
+
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{background:#1F3864}
+thead th{color:#fff;font-weight:600;padding:8px 10px;text-align:left;white-space:nowrap;font-size:11px}
+thead th:first-child{padding-left:16px}
+tbody tr{border-bottom:1px solid #F3F4F6;cursor:pointer;transition:.1s}
+tbody tr:nth-child(even){background:#FAFAFA}
+tbody tr:hover{background:#EFF6FF}
+tbody td{padding:7px 10px;vertical-align:top}
+tbody td:first-child{padding-left:16px}
+.firma-name{font-weight:700;font-size:12px;color:#1F2937}
+.sec-row{display:flex;align-items:center;gap:4px;margin-top:2px}
+.sec-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sec-lbl{font-size:10px;color:#9CA3AF}
+.kontakt-main{font-size:12px;color:#374151}
+.kontakt-tel{font-size:10px;color:#9CA3AF;margin-top:1px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg-cell{font-size:11px;color:#6B7280}
+.notiz-cell{font-size:11px;color:#6B7280;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flag{font-size:12px}
+
+/* Badges */
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap;border:1px solid}
+.s-warm,.s-aktiv{background:#DCFCE7;color:#166534;border-color:#86EFAC}
+.s-positiv,.s-gespraech{background:#DBEAFE;color:#1E40AF;border-color:#93C5FD}
+.s-angebot{background:#EDE9FE;color:#5B21B6;border-color:#C4B5FD}
+.s-email{background:#E0F2FE;color:#0369A1;border-color:#7DD3FC}
+.s-ausstehend{background:#FEF9C3;color:#854D0E;border-color:#FDE047}
+.s-abgeschlossen{background:#D1FAE5;color:#065F46;border-color:#6EE7B7}
+.s-keininteresse{background:#F3F4F6;color:#6B7280;border-color:#D1D5DB}
+.s-offen{background:#F9FAFB;color:#6B7280;border-color:#E5E7EB}
+.prio-h{color:#166534;font-weight:700;font-size:11px}
+.prio-m{color:#1D4ED8;font-weight:600;font-size:11px}
+.prio-l{color:#9CA3AF;font-size:11px}
+.edit-btn{font-size:11px;color:#1F3864;padding:3px 10px;border:1px solid #D1D5DB;border-radius:6px;cursor:pointer;background:#fff;transition:.1s;white-space:nowrap}
+.list-drag-handle{color:#D1D5DB;font-size:14px;cursor:grab;padding:0 4px;user-select:none;line-height:1}
+.list-drag-handle:hover{color:#9CA3AF}
+tbody tr.dragging{opacity:0.4;background:#EFF6FF!important}
+tbody tr.drag-over-top{border-top:3px solid #C9A227!important}
+tbody tr.drag-over-bottom{border-bottom:3px solid #C9A227!important}
+.edit-btn:hover{background:#EFF6FF;border-color:#1F3864}
+
+/* Kanban */
+.kanban-scroll{overflow-x:auto;padding:16px 20px}
+.kanban-board{display:flex;gap:12px;min-width:max-content}
+.k-col{width:180px;flex-shrink:0}
+.k-col-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.k-cnt{font-size:10px;color:#9CA3AF;background:#F3F4F6;padding:1px 7px;border-radius:99px}
+.k-card{background:#fff;border:1px solid #E5E7EB;border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer;transition:.1s}
+.k-card:hover{border-color:#93C5FD;box-shadow:0 1px 4px rgba(31,56,100,.1)}
+.k-card-name{font-size:11px;font-weight:700;color:#1F2937;line-height:1.3;margin-bottom:3px}
+.k-card-seg{font-size:10px;color:#9CA3AF;margin-bottom:6px}
+.k-card-foot{display:flex;justify-content:space-between;align-items:center}
+.k-drag-handle{font-size:14px;color:#D1D5DB;position:absolute;top:6px;right:7px;cursor:grab;line-height:1;user-select:none}
+.k-drag-handle:active{cursor:grabbing}
+.k-card{position:relative}
+.k-card[draggable="true"]{cursor:grab}
+.k-card[draggable="true"]:active{cursor:grabbing}
+.k-card:hover .k-drag-handle{color:#9CA3AF}
+.k-drop-zone{min-height:60px;border-radius:6px;transition:background .15s,border .15s;padding:2px}
+.k-drop-zone.k-drop-over{background:#EFF6FF;border:2px dashed #93C5FD;border-radius:6px}
+.k-empty{font-size:10px;color:#D1D5DB;text-align:center;padding:16px 0;border:1.5px dashed #E5E7EB;border-radius:6px;margin:2px}
+.k-drop-over .k-empty{border-color:#93C5FD;color:#93C5FD}
+
+/* Stats */
+.stats-wrap{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.stats-wrap{grid-template-columns:1fr}}
+.stats-card{background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:14px}
+.stats-card h3{font-size:12px;font-weight:700;color:#374151;margin-bottom:12px}
+.bar-row{margin-bottom:8px}
+.bar-lbl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.bar-lbl-name{color:#4B5563}
+.bar-lbl-n{font-weight:700;color:#1F2937}
+.bar-track{height:7px;background:#F3F4F6;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.status-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F3F4F6;font-size:11px}
+.status-row:last-child{border:none}
+.ti-card{background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:14px;grid-column:1/-1}
+.ti-card-hdr{font-size:12px;font-weight:700;color:#92400E;margin-bottom:8px}
+.ti-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #FDE68A;font-size:11px}
+.ti-row:last-child{border:none}
+.ti-firma{color:#1F2937;font-weight:600}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:460px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+.modal-hdr{background:#1F3864;padding:14px 18px;display:flex;justify-content:space-between;align-items:start}
+.modal-hdr-firma{color:#fff;font-size:14px;font-weight:700}
+.modal-hdr-sec{color:#93B5D5;font-size:11px;margin-top:2px}
+.modal-close{background:none;border:none;color:#93B5D5;font-size:24px;cursor:pointer;line-height:1;padding:0 2px}
+.modal-close:hover{color:#fff}
+.modal-body{padding:18px;display:flex;flex-direction:column;gap:12px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.4px}
+.form-input{font-size:13px;padding:7px 11px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;color:#1F2937;outline:none;transition:.15s}
+.form-input:focus{border-color:#1F3864;box-shadow:0 0 0 3px rgba(31,56,100,.12)}
+textarea.form-input{resize:vertical;min-height:64px;font-family:inherit}
+.modal-foot{padding:12px 18px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #F3F4F6}
+.btn-cancel{font-size:13px;padding:7px 18px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;color:#6B7280;cursor:pointer;font-weight:600}
+.btn-cancel:hover{background:#F9FAFB}
+.btn-save{font-size:13px;padding:7px 20px;background:#1F3864;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;transition:.15s}
+.btn-save:hover{background:#16305A}
+.btn-new{font-size:12px;font-weight:700;padding:6px 16px;background:#C9A227;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;transition:.15s;flex-shrink:0}
+.btn-new:hover{background:#B8860B}
+.btn-delete{font-size:11px;color:#DC2626;padding:3px 8px;border:1px solid #FCA5A5;border-radius:6px;cursor:pointer;background:#FEF2F2;font-weight:600}
+.btn-delete:hover{background:#FEE2E2}
+
+/* List drag-drop */
+.status-select{font-size:10px;padding:2px 4px;border:1px solid #D1D5DB;border-radius:5px;background:white;color:#111;cursor:pointer;max-width:120px}
+/* Netzwerk */
+.netz-btn{font-size:11px;font-weight:600;padding:5px 10px;border:1px solid #D1D5DB;border-radius:7px;background:white;cursor:pointer;color:#1F3864;transition:.1s}
+.netz-btn:hover{background:#EFF6FF;border-color:#1F3864}
+.netz-btn.active{background:#1F3864;color:white}
+.netz-node{position:absolute;transform:translate(-50%,-50%);cursor:grab;user-select:none;z-index:10;transition:box-shadow .15s}
+.netz-node:active{cursor:grabbing}
+.netz-node-inner{background:white;border:2px solid #1F3864;border-radius:10px;padding:7px 10px;font-size:10px;font-family:system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:90px;max-width:140px;text-align:center;line-height:1.3}
+.netz-node-inner b{display:block;font-size:11px;color:#1F3864;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.netz-node-inner small{color:#6B7280;font-size:9px}
+.netz-node.selected .netz-node-inner{border-color:#C9A227;box-shadow:0 0 0 3px rgba(201,162,39,.25)}
+.netz-node.highlighted .netz-node-inner{border-color:#C9A227;background:#FFFBEB;box-shadow:0 0 0 4px rgba(201,162,39,.35)}
+.netz-node.dimmed .netz-node-inner{opacity:0.25}
+.netz-search-wrap{position:relative;display:flex;align-items:center}
+#netz-search{font-size:12px;padding:5px 28px 5px 10px;border:1px solid #D1D5DB;border-radius:7px;width:180px;outline:none;font-family:system-ui,sans-serif}
+#netz-search:focus{border-color:#1F3864;box-shadow:0 0 0 2px rgba(31,56,100,.12)}
+#netz-search-clear{position:absolute;right:7px;cursor:pointer;color:#9CA3AF;font-size:14px;background:none;border:none;line-height:1;display:none}
+#netz-search-clear:hover{color:#1F3864}
+.netz-link-label{position:absolute;font-size:9px;background:white;border:1px solid #E5E7EB;border-radius:4px;padding:1px 4px;color:#6B7280;pointer-events:none;z-index:15;transform:translate(-50%,-50%)}
+
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast">✓ Gespeichert</div>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="title">Hasli Transport Roat — CRM</div>
+    <div class="sub">Kühltransporte Schweiz &nbsp;|&nbsp; Akquisitions-Pipeline</div>
+  </div>
+  <div class="tab-bar-outer">
+    <button class="tab on" onclick="switchTab('list')">Liste</button>
+    <button class="tab" onclick="switchTab('kanban')">Kanban</button>
+    <button class="tab" onclick="switchTab('stats')">Statistik</button>
+    <button class="tab" onclick="switchTab('netz')">Netzwerk</button>
+  </div>
+</div>
+
+<!-- Stats bar -->
+<div class="stat-bar" id="stat-bar"></div>
+
+<!-- Filters -->
+<div class="filters">
+  <input id="fsearch" placeholder="🔍 Suchen nach Firma, Kontakt, Segment…" oninput="render()">
+  <select id="fsec" onchange="render()">
+    <option value="">Alle Sektionen</option>
+    <option value="A">A — Pipeline</option>
+    <option value="B">B — Direktkunden</option>
+    <option value="C">C — Spediteure</option>
+    <option value="D">D — Pharma / ADR</option>
+    <option value="E1">E1 — Tessin ★ (IT)</option>
+    <option value="E2">E2 — Westschweiz</option>
+    <option value="F">F — CH Lebensmittelproduzenten</option>
+  </select>
+  <select id="fprio" onchange="render()">
+    <option value="">Alle Prioritäten</option>
+    <option>Hoch</option><option>Mittel</option><option>Niedrig</option>
+  </select>
+  <select id="fstat" onchange="render()">
+    <option value="">Alle Status</option>
+    <option>Offen</option><option>Warm</option><option>Aktiv</option>
+    <option>Positiv</option><option>Gespräch geführt</option>
+    <option>Angebot gemacht</option><option>E-Mail gesandt</option>
+    <option>Ausstehend</option><option>Abgeschlossen</option><option>Kein Interesse</option>
+  </select>
+  <select id="fkanton" onchange="render()">
+    <option value="">Alle Kantone</option>
+    <option>AG</option><option>AI</option><option>AR</option><option>AT</option><option>BE</option>
+    <option>BL</option><option>BS</option><option>FL</option><option>FR</option><option>GE</option>
+    <option>GL</option><option>GR</option><option>LU</option><option>NE</option><option>NW</option>
+    <option>OW</option><option>SG</option><option>SH</option><option>SO</option><option>SZ</option>
+    <option>TG</option><option>TI</option><option>UR</option><option>VD</option><option>VS</option>
+    <option>ZG</option><option>ZH</option>
+  </select>
+  <span class="fcnt" id="fcnt"></span>
+  <button class="btn-new" onclick="openNew()">+ Neue Firma</button>
+</div>
+
+<!-- Views -->
+<div id="view-list"   class="view active"><div class="tbl-wrap"><table><thead><tr><th style="width:24px"></th><th>Firma</th><th>Ort</th><th>Kanton</th><th>Kontakt</th><th>Status</th><th>Priorität</th><th>Notiz</th><th></th></tr></thead><tbody id="tbl-body"></tbody></table></div></div>
+<div id="view-kanban" class="view"><div class="kanban-scroll"><div class="kanban-board" id="kanban-board"></div></div></div>
+<div id="view-stats"  class="view"><div class="stats-wrap" id="stats-content"></div></div>
+<div id="view-netz" class="view"><div id="netz-container" style="position:relative;width:100%;height:calc(100vh - 180px);overflow:hidden;background:#F8FAFC;border-top:1px solid #E5E7EB"><canvas id="netz-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><div id="netz-nodes" style="position:absolute;top:0;left:0;width:100%;height:100%"></div><div id="netz-toolbar" style="position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:20"><div class="netz-search-wrap"><input id="netz-search" placeholder="🔍 Firma suchen…" oninput="netzSearch(this.value)" autocomplete="off"><button id="netz-search-clear" onclick="netzClearSearch()" title="Suche leeren">×</button></div><button onclick="netzReset()" class="netz-btn">↺ Reset</button><button onclick="netzAddLink()" class="netz-btn" id="btn-addlink">+ Verbindung</button><button onclick="netzDeleteLink()" class="netz-btn" id="btn-dellink">✕ Linie löschen</button><span id="netz-hint" style="font-size:11px;color:#6B7280;padding:4px 8px;background:white;border-radius:6px;border:1px solid #E5E7EB"></span></div><div id="netz-legend" style="position:absolute;bottom:10px;left:10px;background:white;border:1px solid #E5E7EB;border-radius:8px;padding:8px 12px;font-size:10px;color:#6B7280;z-index:20"><b style="color:#1F3864">Verbindungstypen:</b><br><span style="color:#166534">▬</span> Lieferant von &nbsp; <span style="color:#1E40AF">▬</span> Subunternehmer &nbsp; <span style="color:#9A3412">▬</span> Konkurrent &nbsp; <span style="color:#6B21A8">▬</span> Partner &nbsp; <span style="color:#6B7280">▬</span> Sonstiges</div></div></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div><div class="modal-hdr-firma" id="m-firma"></div><div class="modal-hdr-sec" id="m-sec"></div></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Firma</label><input class="form-input" id="m-f-firma"></div>
+        <div class="form-group"><label class="form-label">Kontakt</label><input class="form-input" id="m-f-kontakt"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Sektion</label>
+          <select class="form-input" id="m-f-sec">
+            <option value="A">A — Pipeline</option>
+            <option value="B">B — Direktkunden</option>
+            <option value="C">C — Spediteure</option>
+            <option value="D">D — Pharma / ADR</option>
+            <option value="E1">E1 — Tessin ★ (IT)</option>
+            <option value="E2">E2 — Westschweiz</option>
+            <option value="F">F — CH Lebensmittelproduzenten</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Sprache</label>
+          <select class="form-input" id="m-f-lang">
+            <option value="DE">DE — Deutsch</option>
+            <option value="IT">IT — Italiano 🇮🇹</option>
+            <option value="FR">FR — Français 🇫🇷</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Telefon / E-Mail</label><input class="form-input" id="m-f-tel"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Ort</label><input class="form-input" id="m-f-ort" placeholder="z.B. Arbon"></div>
+        <div class="form-group"><label class="form-label">Kanton</label><input class="form-input" id="m-f-kanton" placeholder="z.B. TG" style="max-width:100px"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-input" id="m-f-status">
+            <option>Offen</option><option>Warm</option><option>Aktiv</option><option>Positiv</option>
+            <option>Gespräch geführt</option><option>Angebot gemacht</option><option>E-Mail gesandt</option>
+            <option>Ausstehend</option><option>Abgeschlossen</option><option>Kein Interesse</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Priorität</label>
+          <select class="form-input" id="m-f-prio">
+            <option>Hoch</option><option>Mittel</option><option>Niedrig</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Notiz</label><textarea class="form-input" id="m-f-notiz"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-delete" id="btn-delete" onclick="deleteContact()">Löschen</button>
+      <div style="flex:1"></div>
+      <button class="btn-cancel" onclick="closeModal()">Abbrechen</button>
+      <button class="btn-save" onclick="saveContact()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SEC_COLORS  = {A:"#1F3864",B:"#166534",C:"#6B21A8",D:"#9A3412",E1:"#92400E",E2:"#0E7490",F:"#065F46"};
+const SEC_LABELS  = {A:"A — Pipeline",B:"B — Direktkunden",C:"C — Spediteure",D:"D — Pharma/ADR",E1:"E1 — Tessin ★ (IT)",E2:"E2 — Westschweiz",F:"F — CH Lebensmittelproduzenten"};
+const FLAGS = {IT:"🇮🇹",FR:"🇫🇷",DE:""};
+const STATUS_OPTIONS = ["Offen","Warm","Aktiv","Positiv","Gespräch geführt","Angebot gemacht","E-Mail gesandt","Ausstehend","Abgeschlossen","Kein Interesse"];
+const STATUS_STYLE_INLINE = {
+  "Warm":"background:#DCFCE7;color:#166534;border-color:#86EFAC",
+  "Aktiv":"background:#DCFCE7;color:#166534;border-color:#86EFAC",
+  "Positiv":"background:#DBEAFE;color:#1E40AF;border-color:#93C5FD",
+  "Gespräch geführt":"background:#DBEAFE;color:#1E40AF;border-color:#93C5FD",
+  "Angebot gemacht":"background:#EDE9FE;color:#5B21B6;border-color:#C4B5FD",
+  "E-Mail gesandt":"background:#E0F2FE;color:#0369A1;border-color:#7DD3FC",
+  "Ausstehend":"background:#FEF9C3;color:#854D0E;border-color:#FDE047",
+  "Abgeschlossen":"background:#D1FAE5;color:#065F46;border-color:#6EE7B7",
+  "Kein Interesse":"background:#F3F4F6;color:#6B7280;border-color:#D1D5DB",
+  "Offen":"background:#F9FAFB;color:#6B7280;border-color:#E5E7EB",
+};
+
+function changeStatus(id, newStatus) {
+  contacts = contacts.map(c => c.id === id ? {...c, status: newStatus} : c);
+  saveData();
+  render();
+}
+
+const STATUS_CLS = {
+  "Warm":"s-warm","Aktiv":"s-aktiv","Positiv":"s-positiv",
+  "Gespräch geführt":"s-gespraech","Angebot gemacht":"s-angebot",
+  "E-Mail gesandt":"s-email","Ausstehend":"s-ausstehend",
+  "Abgeschlossen":"s-abgeschlossen","Kein Interesse":"s-keininteresse","Offen":"s-offen"
+};
+
+const DEFAULT_CONTACTS = [
+  {id:"a1",s:"A",firma:"Schönholzer Transport Märstetten",kontakt:"Persönlicher Kontakt",tel:"—",segment:"Subunternehmer",status:"Warm",prio:"Hoch",notiz:"Früherer Arbeitgeber — warme Beziehung, Top-Priorität",ort:"Märstetten",kanton:"TG",lang:"DE"},
+  {id:"b1",s:"B",firma:"Fenaco / LANDI Gruppe",kontakt:"Disposition",tel:"—",segment:"Lebensmittel-Grosshandel",status:"Offen",prio:"Hoch",notiz:"Agrarprodukte, Frischware, Tiefkühl — sehr grosses Volumen",ort:"Bern",kanton:"BE",lang:"DE"},
+  {id:"b2",s:"B",firma:"Transgourmet Schweiz AG",kontakt:"Logistikleitung",tel:"—",segment:"Foodservice-Grosshandel",status:"Offen",prio:"Hoch",notiz:"Beliefert Restaurants/Hotels — tägl. Kühltransporte",ort:"Dietikon",kanton:"ZH",lang:"DE"},
+  {id:"b3",s:"B",firma:"Pistor AG (Coop-Tochter)",kontakt:"Transportleitung",tel:"—",segment:"Backwaren / Foodservice",status:"Offen",prio:"Hoch",notiz:"Bäckereilieferungen — Frische & Tiefkühl gemischt",ort:"Rothenburg",kanton:"LU",lang:"DE"},
+  {id:"b4",s:"B",firma:"Biotta AG",kontakt:"Logistik direkt",tel:"—",segment:"Getränke / Bio",status:"Offen",prio:"Hoch",notiz:"Nahe Standort TG — Frischprodukte, Bio-Segment",ort:"Tägerwilen",kanton:"TG",lang:"DE"},
+  {id:"b5",s:"B",firma:"Thurgauer Mosterei (Möhl AG)",kontakt:"Betriebsleitung",tel:"—",segment:"Getränke",status:"Offen",prio:"Mittel",notiz:"Fruchtsäfte, saisonale Spitzen — kurze Distanzen TG",ort:"Arbon",kanton:"TG",lang:"DE"},
+  {id:"b6",s:"B",firma:"Biedermann Frischprodukte AG",kontakt:"Disponenten",tel:"—",segment:"Frischware / Gemüse",status:"Offen",prio:"Hoch",notiz:"Gemüseproduzent Ostschweiz — Direktlieferungen CH",ort:"Oberbüren",kanton:"SG",lang:"DE"},
+  {id:"b7",s:"B",firma:"Hilcona AG",kontakt:"Logistikleitung",tel:"—",segment:"Convenience / Tiefkühl",status:"Offen",prio:"Hoch",notiz:"Grenznahe Lage FL — Tiefkühlprodukte, grosses Volumen",ort:"Schaan",kanton:"FL",lang:"DE"},
+  {id:"b8",s:"B",firma:"Käserei Studer AG",kontakt:"Betriebsleiter",tel:"—",segment:"Käse / Milchprodukte",status:"Offen",prio:"Mittel",notiz:"Lokaler Käseproduzent TG — regionale Auslieferung",ort:"Sirnach",kanton:"TG",lang:"DE"},
+  {id:"b9",s:"B",firma:"Lidl Schweiz",kontakt:"Transportkoordination",tel:"—",segment:"Lebensmitteleinzelhandel",status:"Offen",prio:"Hoch",notiz:"HQ Weinfelden TG — Zulieferer-Pool aktiv gesucht",ort:"Weinfelden",kanton:"TG",lang:"DE"},
+  {id:"b10",s:"B",firma:"Migros Ostschweiz",kontakt:"Transportdisposition",tel:"—",segment:"Lebensmitteleinzelhandel",status:"Offen",prio:"Hoch",notiz:"VZ Gossau — Sub-Zulieferer für Spitzen gesucht",ort:"Gossau",kanton:"SG",lang:"DE"},
+  {id:"c1",s:"C",firma:"Planzer Transport AG",kontakt:"Subunternehmer-Abt.",tel:"—",segment:"Vollsortiment-Spediteur",status:"Offen",prio:"Hoch",notiz:"Ex-Arbeitgeber Michael Roat — persönlicher Kontakt vorhanden",ort:"Zuchwil",kanton:"SO",lang:"DE"},
+  {id:"c2",s:"C",firma:"Camion Transport AG",kontakt:"Subunternehmer-Abt.",tel:"—",segment:"Vollsortiment-Spediteur",status:"Offen",prio:"Hoch",notiz:"Grosse Sub-Flotte, aktiver Markt für EU-Kühlkapazität",ort:"Zuchwil",kanton:"SO",lang:"DE"},
+  {id:"c3",s:"C",firma:"Dachser Schweiz AG",kontakt:"Subunternehmer-Pool",tel:"—",segment:"Stückgut / Kühlung",status:"Offen",prio:"Mittel",notiz:"Europäisches Netz — regelmässige Sub-Vergabe",ort:"Metzingen",kanton:"AG",lang:"DE"},
+  {id:"c4",s:"C",firma:"Kuehne+Nagel (Road)",kontakt:"Fr. Honegger",tel:"zentrale.glattbrugg@kuehne-nagel.com",segment:"Volllogistik",status:"E-Mail gesandt",prio:"Hoch",notiz:"Bestehender Kontakt — Kapazitätsbedarf Kühlung",ort:"Basel",kanton:"BS",lang:"DE"},
+  {id:"c5",s:"C",firma:"Logistik Schmid AG",kontakt:"Disponenten direkt",tel:"—",segment:"Kühltransport Spezialist",status:"Offen",prio:"Hoch",notiz:"Kühltransport-Fokus Sennwald SG — Subunternehmer gesucht",ort:"Opfikon",kanton:"ZH",lang:"DE"},
+  {id:"c6",s:"C",firma:"Gebrüder Weiss AG",kontakt:"Subunternehmer-Abt.",tel:"—",segment:"AT/CH Spediteur",status:"Offen",prio:"Mittel",notiz:"AT-Verbindung, Grenzverkehr CH–AT — passt zum Korridor",ort:"Sennwald",kanton:"SG",lang:"DE"},
+  {id:"d1",s:"D",firma:"Novartis AG",kontakt:"Transportkoordination",tel:"—",segment:"Pharma",status:"Offen",prio:"Hoch",notiz:"Schweizerhalle — ADR Tank zwingend, hohe Anforderungen",ort:"Muttenz",kanton:"BL",lang:"DE"},
+  {id:"d2",s:"D",firma:"Lonza AG",kontakt:"Logistikleitung",tel:"—",segment:"Chemie / Pharma",status:"Offen",prio:"Hoch",notiz:"ADR-intensive Produkte — Tank-Zertifikat erforderlich",ort:"Visp",kanton:"VS",lang:"DE"},
+  {id:"d3",s:"D",firma:"Clariant AG",kontakt:"Transportplanung",tel:"—",segment:"Spezialchemie",status:"Offen",prio:"Mittel",notiz:"Chemische Spezialprodukte — ADR alle Klassen",ort:"Muttenz",kanton:"BL",lang:"DE"},
+  {id:"d4",s:"D",firma:"Brenntag Schweizerhall AG",kontakt:"Logistikleitung",tel:"—",segment:"Chemievertrieb",status:"Offen",prio:"Hoch",notiz:"Grösster Chemieverteiler CH — Tank + ADR",ort:"Schweizerhalle",kanton:"BL",lang:"DE"},
+  {id:"e1",s:"E1",firma:"Vini Bee SA",kontakt:"Geschäftsleitung (IT)",tel:"—",segment:"Wein / Weinhandel",status:"Offen",prio:"Hoch",notiz:"★ Tessiner Weinhandel — Kühlkette Qualitätsweine TI↔CH",ort:"Lugano",kanton:"TI",lang:"IT"},
+  {id:"e2",s:"E1",firma:"Tamborini Vini SA",kontakt:"Titolare (IT)",tel:"—",segment:"Wein / Kellerei",status:"Offen",prio:"Hoch",notiz:"★ Traditionsweingut Tessin — Kühltransport CH-weit",ort:"Lamone",kanton:"TI",lang:"IT"},
+  {id:"e3",s:"E1",firma:"Gialdi Vini SA",kontakt:"Logistik (IT)",tel:"—",segment:"Wein / Kellerei",status:"Offen",prio:"Hoch",notiz:"★ Grösster Tessiner Weinproduzent — Merlot DOC",ort:"Mendrisio",kanton:"TI",lang:"IT"},
+  {id:"e4",s:"E1",firma:"Caffe Chicco d'Oro",kontakt:"Logistica (IT)",tel:"—",segment:"Kaffee / Feinkost",status:"Offen",prio:"Hoch",notiz:"★ Bekannter Tessiner Kaffeeröster — Frischprodukte",ort:"Balerna",kanton:"TI",lang:"IT"},
+  {id:"e5",s:"E1",firma:"Pellandini SA",kontakt:"Direttore logistica (IT)",tel:"—",segment:"Lebensmittel / Pasta",status:"Offen",prio:"Hoch",notiz:"★ Tessiner Lebensmittelhersteller — Pasta & Spezialitäten",ort:"Gordola",kanton:"TI",lang:"IT"},
+  {id:"e6",s:"E1",firma:"Donda SA",kontakt:"Direzione (IT)",tel:"—",segment:"Fleisch / Metzgerei",status:"Offen",prio:"Hoch",notiz:"★ Tessiner Metzgereikette — Fleischtransport temp.-geführt",ort:"Lugano",kanton:"TI",lang:"IT"},
+  {id:"e7",s:"E1",firma:"Coop Ticino / VZ Castione",kontakt:"Transportkoordination",tel:"—",segment:"Lebensmitteleinzelhandel",status:"Offen",prio:"Hoch",notiz:"★ Coop VZ Tessin — Sub-Kühlkapazität, bilingual DE/IT",ort:"Castione",kanton:"TI",lang:"IT"},
+  {id:"e8",s:"E1",firma:"Migros Ticino",kontakt:"Logistica (IT)",tel:"—",segment:"Lebensmitteleinzelhandel",status:"Offen",prio:"Hoch",notiz:"★ Migros Tessin — Frischware, Sub gesucht",ort:"Agno",kanton:"TI",lang:"IT"},
+  {id:"e9",s:"E1",firma:"Industrie Lattiere Ticinesi",kontakt:"Direttore (IT)",tel:"—",segment:"Milch / Milchprodukte",status:"Offen",prio:"Hoch",notiz:"★ Tessiner Molkerei — Frischmilch, Käse, tägl. Kühlfahrten",ort:"Stabio",kanton:"TI",lang:"IT"},
+  {id:"e10",s:"E1",firma:"Vinattieri Ticinesi",kontakt:"Direzione (IT)",tel:"—",segment:"Wein / Handel",status:"Offen",prio:"Hoch",notiz:"★ Weinhandelsverband TI — öffnet Türen zu mehreren Produzenten",ort:"Lugano",kanton:"TI",lang:"IT"},
+  {id:"f1",s:"E2",firma:"Obrist SA (Weinhandel)",kontakt:"Logistikleitung",tel:"—",segment:"Wein / Getränke",status:"Offen",prio:"Hoch",notiz:"Grösster Schweizer Weinproduzent — temp.-kritisch",ort:"Vevey",kanton:"VD",lang:"FR"},
+  {id:"f2",s:"E2",firma:"Provins Valais",kontakt:"Transportkoordination",tel:"—",segment:"Wein / Kellerei",status:"Offen",prio:"Hoch",notiz:"Grösste Walliser Kellerei — Kühlung Sommersaison",ort:"Sion",kanton:"VS",lang:"FR"},
+  {id:"f3",s:"E2",firma:"Schenk Suisse SA",kontakt:"Transportplanung",tel:"—",segment:"Wein / Kellerei",status:"Offen",prio:"Hoch",notiz:"Grosse Weinkellerei Romandie — Weinlogistik CH-weit",ort:"Rolle",kanton:"VD",lang:"FR"},
+  {id:"f4",s:"E2",firma:"Laiteries Réunies Genève",kontakt:"Transportleitung",tel:"—",segment:"Milch / Milchprodukte",status:"Offen",prio:"Hoch",notiz:"Grosse Genfer Molkerei — Frischmilch, tägl. Kühlfahrten",ort:"Plan-les-Ouates",kanton:"GE",lang:"FR"},
+  {id:"f5",s:"E2",firma:"Elsa / Migros Industrie",kontakt:"Transportkoordination",tel:"—",segment:"Milch / Joghurt",status:"Offen",prio:"Hoch",notiz:"Grösste Joghurtfabrik CH — Sub-Kapazität gesucht",ort:"Estavayer-le-Lac",kanton:"FR",lang:"FR"},
+  {id:"f6",s:"E2",firma:"Coop VZ Aclens",kontakt:"Transportkoordination",tel:"—",segment:"Lebensmitteleinzelhandel",status:"Offen",prio:"Hoch",notiz:"Coop VZ Westschweiz — Sub-Kühlkapazität Spitzenzeiten",ort:"Aclens",kanton:"VD",lang:"FR"},
+  {id:"f7",s:"E2",firma:"Lidl Suisse (Westschweiz)",kontakt:"Logistik-Einkauf",tel:"—",segment:"Lebensmitteleinzelhandel",status:"Offen",prio:"Hoch",notiz:"Starke Expansion Westschweiz — Kühlzulieferer gesucht",ort:"Weinfelden",kanton:"TG",lang:"FR"},
+  // F — Lebensmittelproduzenten CH (Milch/Käse, Getränke, Tiefkühl, Bäckerei)
+  // F1: Milch / Käse / Joghurt
+  {id:"p1",  s:"F", firma:"Emmi AG",                      kontakt:"Subunternehmer-Logistik", tel:"—", segment:"Milch / Käse / Joghurt", status:"Offen", prio:"Hoch",   notiz:"Grösster CH-Milchverarbeiter. Tägliche Vollladungen Frischprodukte. Standorte: LU, AG, BE", ort:"Luzern",kanton:"LU",lang:"DE"},
+  {id:"p2",  s:"F", firma:"Cremo SA",                     kontakt:"Transportplanung",        tel:"—", segment:"Milch / Butter / Käse",  status:"Offen", prio:"Hoch",   notiz:"Zweitgrösste Molkerei CH. Hohe Volumina Romandie → Deutschschweiz. Villars-s-Glâne FR", ort:"Villars-sur-Glâne",kanton:"FR",lang:"FR"},
+  {id:"p3",  s:"F", firma:"Elsa Group SA (Migros)",       kontakt:"Transportkoordination",   tel:"—", segment:"Milch / Joghurt / Käse", status:"Offen", prio:"Hoch",   notiz:"Zentrale Produktion Estavayer FR → alle Migros-VZ CH-weit. Enormer Tagesbedarf", ort:"Estavayer-le-Lac",kanton:"FR",lang:"FR"},
+  {id:"p4",  s:"F", firma:"Laiteries Réunies Genève",     kontakt:"Transportleitung",        tel:"—", segment:"Milch / Joghurt / Käse", status:"Offen", prio:"Hoch",   notiz:"Modernes Logistikzentrum Plan-les-Ouates GE, A1-Nähe. Tägliche Kühldistribution Westschweiz", ort:"Plan-les-Ouates",kanton:"GE",lang:"FR"},
+  {id:"p5",  s:"F", firma:"Froneri Switzerland SA",       kontakt:"Subunternehmer-Abt.",     tel:"—", segment:"Glacé / Tiefkühl",       status:"Offen", prio:"Hoch",   notiz:"Glacé TK -18 bis -25 °C. Goldach SG → 9 VZ CH-weit. Saisonale Sommerspitzen. TOP!", ort:"Goldach",kanton:"SG",lang:"DE"},
+  {id:"p6",  s:"F", firma:"Hochdorf Swiss Nutrition AG",  kontakt:"Logistikleitung",         tel:"—", segment:"Milchpulver / Babynahrung",status:"Offen",prio:"Mittel", notiz:"Sulgen TG wird Hauptstandort. Temp.-empfindliche Fertigprodukte + Exportlogistik", ort:"Sulgen",kanton:"TG",lang:"DE"},
+  {id:"p7",  s:"F", firma:"Baer AG (Lactalis Suisse)",    kontakt:"Transportkoordination",   tel:"—", segment:"Weichkäse",              status:"Offen", prio:"Mittel",  notiz:"Grösster CH-Weichkäseproduzent. Küssnacht SZ. Lückenlose Kühlkette zwingend", ort:"Küssnacht",kanton:"SZ",lang:"DE"},
+  {id:"p8",  s:"F", firma:"Züger Frischkäse AG",          kontakt:"Disponenten",             tel:"—", segment:"Mozzarella / Frischkäse", status:"Offen", prio:"Hoch",  notiz:"Ultra-verderblicher Frischkäse. Oberbüren SG, Industriezone. Höchste Priorität!", ort:"Oberbüren",kanton:"SG",lang:"DE"},
+  {id:"p9",  s:"F", firma:"Hardegger Käse AG",            kontakt:"Transportplanung",        tel:"—", segment:"Tilsiter / Halbhartkäse", status:"Offen", prio:"Mittel", notiz:"Jonschwil SG, Nähe Wil / A1. Regelmässige Outbound-Ladungen reifer Käse", ort:"Jonschwil",kanton:"SG",lang:"DE"},
+  {id:"p10", s:"F", firma:"LATI SA",                      kontakt:"Direzione (IT)",          tel:"—", segment:"Milch / Käse TI",        status:"Offen", prio:"Hoch",   notiz:"Einzige industrielle Molkerei im Tessin. S. Antonino, A2-Ausfahrt. Kühltransport nach Nord-CH", ort:"S. Antonino",kanton:"TI",lang:"IT"},
+  {id:"p11", s:"F", firma:"Strähl Käse AG",               kontakt:"Logistik",                tel:"—", segment:"Käse / Schmelzkäse",     status:"Offen", prio:"Mittel",  notiz:"Siegershausen TG, guter Strassenzugang. Regelmässige Käsetransporte Retail-VZ", ort:"Siegershausen",kanton:"TG",lang:"DE"},
+  {id:"p12", s:"F", firma:"Bodensee Käse AG",             kontakt:"Disponenten",             tel:"—", segment:"Käse",                   status:"Offen", prio:"Mittel",  notiz:"Rossrüti/Wil SG, A1-Nähe. Temperaturkontrollierte Käsedistribution national", ort:"Rossrüti",kanton:"SG",lang:"DE"},
+  {id:"p13", s:"F", firma:"Margot Fromages SA",           kontakt:"Logistikverantwortlicher",tel:"—", segment:"Käseaffinage / Export",  status:"Offen", prio:"Mittel",  notiz:"Yverdon VD. Gruyère AOP, Tête de Moine, Raclette. Grosse Outbound-Volumen + Export DE/FR", ort:"Yverdon-les-Bains",kanton:"VD",lang:"FR"},
+  {id:"p14", s:"F", firma:"Appenzeller Käse GmbH",        kontakt:"Transportkoordination",   tel:"—", segment:"Appenzeller AOC",        status:"Offen", prio:"Mittel",  notiz:"42 Dorfkäsereien AI/SG. Sammellogistik + Distribution national + Grossexport", ort:"Appenzell",kanton:"AI",lang:"DE"},
+  {id:"p15", s:"F", firma:"Tilsiter Switzerland GmbH",    kontakt:"Disponenten",             tel:"—", segment:"Tilsiter Käse",          status:"Offen", prio:"Mittel",  notiz:"Weinfelden TG. 10-15 Käsereien Ostschweiz. Käse-Sammellogistik + Retail + Export", ort:"Weinfelden",kanton:"TG",lang:"DE"},
+  {id:"p16", s:"F", firma:"Caseificio del Gottardo SA",   kontakt:"Direzione (IT)",          tel:"—", segment:"Käse / Glacé TI",        status:"Offen", prio:"Mittel",  notiz:"Airolo TI, 200m von A2-Ausfahrt. Exzellenter LKW-Zugang. Coop/Migros-Belieferung", ort:"Airolo",kanton:"TI",lang:"IT"},
+  {id:"p17", s:"F", firma:"Valcrème SA",                  kontakt:"Logistikleitung",         tel:"—", segment:"Rahm / Butter / Raclette",status:"Offen",prio:"Mittel",  notiz:"Sierre VS. Lange Wege Wallis → ZH/BE/BS. Kühlkette essenziell", ort:"Sierre",kanton:"VS",lang:"FR"},
+  {id:"p18", s:"F", firma:"Molkerei Fuchs AG",            kontakt:"Disposition",             tel:"—", segment:"Frischmilch / Rahm",     status:"Offen", prio:"Mittel",  notiz:"Rorschach SG. Täglicher Kühlbedarf Frischmilch + Rahm. Regionale Distribution Ostschweiz", ort:"Rorschach",kanton:"SG",lang:"DE"},
+  // F2: Getränke
+  {id:"p19", s:"F", firma:"Feldschlösschen Getränke AG",  kontakt:"Subunternehmer-Pool",     tel:"—", segment:"Bier / Mineralwasser",   status:"Offen", prio:"Hoch",   notiz:"Rheinfelden AG. 42% Biermarktanteil, 22 Standorte CH. Regelmässig Subunternehmer im Einsatz", ort:"Rheinfelden",kanton:"AG",lang:"DE"},
+  {id:"p20", s:"F", firma:"Rivella AG",                   kontakt:"Transportkoordination",   tel:"—", segment:"Softdrinks / Säfte",     status:"Offen", prio:"Hoch",   notiz:"Rothrist AG, autobahnnah. Michel Pure Taste kaltgepresst = Kühlung zwingend. Externer Bedarf belegt", ort:"Rothrist",kanton:"AG",lang:"DE"},
+  {id:"p21", s:"F", firma:"Ramseier Suisse AG",           kontakt:"Logistikleitung",         tel:"—", segment:"Fruchtsäfte / Bier",     status:"Offen", prio:"Hoch",   notiz:"Sursee LU + Hochdorf + Elm + Oberaach TG. Frische Säfte brauchen Kühlung. 4 Standorte!", ort:"Sursee",kanton:"LU",lang:"DE"},
+  {id:"p22", s:"F", firma:"Mosterei Möhl AG",             kontakt:"Betriebsleitung",         tel:"—", segment:"Apfelsaft / Cider",      status:"Offen", prio:"Hoch",   notiz:"Arbon TG, Industriegebiet, A7-nah. Frische Apfelsäfte + Cider BRAUCHEN Kühltransport", ort:"Arbon",kanton:"TG",lang:"DE"},
+  {id:"p23", s:"F", firma:"Biotta AG (ORIOR)",            kontakt:"Logistikverantwortlicher",tel:"—", segment:"Bio-Frischsäfte",        status:"Offen", prio:"Hoch",   notiz:"Tägerwilen TG, Industriegebiet. Bio-Frischsäfte 2–7 °C zwingend. Export 35 Länder", ort:"Tägerwilen",kanton:"TG",lang:"DE"},
+  {id:"p24", s:"F", firma:"Coca-Cola HBC Schweiz AG",     kontakt:"Subunternehmer-Pool",     tel:"—", segment:"Softdrinks / Mineralwasser",status:"Offen",prio:"Mittel", notiz:"Brüttisellen ZH. Neues Hochregallager. Eistee + Säfte temperaturkontrolliert", ort:"Brüttisellen",kanton:"ZH",lang:"DE"},
+  {id:"p25", s:"F", firma:"Heineken Switzerland AG",      kontakt:"Transportplanung",        tel:"—", segment:"Bier",                   status:"Offen", prio:"Mittel",  notiz:"Luzern LU + Chur GR. 20% CH-Biermarkt. 2 Standorte = umfangreiche Logistik", ort:"Luzern",kanton:"LU",lang:"DE"},
+  {id:"p26", s:"F", firma:"Brauerei Locher AG",           kontakt:"Logistikleitung",         tel:"—", segment:"Bier",                   status:"Offen", prio:"Mittel",  notiz:"Appenzell AI. 3. grösste Brauerei CH, Übernahme Chopfab Boxer. Wachsende Logistikbedürfnisse", ort:"Appenzell",kanton:"AI",lang:"DE"},
+  {id:"p27", s:"F", firma:"Brauerei Schützengarten AG",   kontakt:"Disponenten",             tel:"—", segment:"Bier",                   status:"Offen", prio:"Mittel",  notiz:"St. Gallen SG. 2. grösste unabhängige Brauerei CH. Temp.-Kontrolle, national", ort:"St. Gallen",kanton:"SG",lang:"DE"},
+  {id:"p28", s:"F", firma:"Aproz Sources Minérales SA",   kontakt:"Transportkoordination",   tel:"—", segment:"Mineralwasser / Sirup",  status:"Offen", prio:"Mittel",  notiz:"Nendaz VS. Führende CH-Mineralwassermarke (Migros). Standort Wallis = lange Wege", ort:"Nendaz",kanton:"VS",lang:"FR"},
+  {id:"p29", s:"F", firma:"Provins SA (fenaco)",          kontakt:"Logistikleitung",         tel:"—", segment:"Wein",                   status:"Offen", prio:"Hoch",   notiz:"Sion VS. 10% CH-Weinproduktion. Wein 12–16 °C. Grosses Volumen, Wallis = lange Transportwege", ort:"Sion",kanton:"VS",lang:"FR"},
+  {id:"p30", s:"F", firma:"Cave de la Côte",              kontakt:"Logistikverantwortlicher",tel:"—", segment:"Wein",                   status:"Offen", prio:"Mittel",  notiz:"Tolochenaz VD, direkt an A1. Grösste Winzergenossenschaft VD. Ideal für Sattelzüge", ort:"Tolochenaz",kanton:"VD",lang:"FR"},
+  {id:"p31", s:"F", firma:"Goba AG",                      kontakt:"Geschäftsleitung",        tel:"—", segment:"Mineralwasser / Eistee", status:"Offen", prio:"Mittel",  notiz:"Gontenbad AI. Flauder-Eistee temperaturempfindlich. Kultmarke mit wachsendem Absatz", ort:"Gontenbad",kanton:"AI",lang:"DE"},
+  {id:"p32", s:"F", firma:"Mineralquelle Eptingen AG",    kontakt:"Transportkoordination",   tel:"—", segment:"Mineralwasser",          status:"Offen", prio:"Mittel",  notiz:"Eptingen BL + Lostorf SO. 2 Standorte, beliefert Coop/Aldi/Lidl. Hohes Volumen", ort:"Eptingen",kanton:"BL",lang:"DE"},
+  // F3: Tiefkühl / Convenience
+  {id:"p33", s:"F", firma:"Frigemo AG (fenaco)",          kontakt:"Subunternehmer-Abt.",     tel:"—", segment:"TK-Kartoffeln / Gemüse", status:"Offen", prio:"Hoch",   notiz:"TOP! Cressier NE + Mellingen AG + Zollikofen BE. 400 t/Tag. 3'000 Bestellungen/Tag. TK-Pendelverkehre", ort:"Cressier",kanton:"NE",lang:"DE"},
+  {id:"p34", s:"F", firma:"FFB Group (Migros Industrie)", kontakt:"Transportplanung",        tel:"—", segment:"TK-Backwaren / Convenience",status:"Offen",prio:"Hoch",  notiz:"Bischofszell TG + ZH + AG + VD + TI. 10+ Standorte. Grösster Nahrungsmittelproduzent Migros", ort:"Bischofszell",kanton:"TG",lang:"DE"},
+  {id:"p35", s:"F", firma:"Hilcona AG (Bell/Coop)",       kontakt:"Logistik-Koordination",   tel:"—", segment:"Frischpasta / TK-Gerichte",status:"Offen",prio:"Hoch",   notiz:"Schaan FL + Orbe VD + Landquart GR. Frischpasta 2–5 °C + TK. Pendelverkehre zwischen 3 Standorten", ort:"Schaan",kanton:"FL",lang:"DE"},
+  {id:"p36", s:"F", firma:"Findus Switzerland",           kontakt:"Transportkoordination",   tel:"—", segment:"TK-Gemüse / Fertiggerichte",status:"Offen",prio:"Hoch",  notiz:"Rorschach SG. Bekannteste TK-Marke CH → alle Retail-VZ. Grossvolumiger TK-Transport", ort:"Rorschach",kanton:"SG",lang:"DE"},
+  {id:"p37", s:"F", firma:"Hiestand / Aryzta",            kontakt:"Subunternehmer-Pool",     tel:"—", segment:"TK-Backwaren",           status:"Offen", prio:"Hoch",   notiz:"Schlieren ZH. 100% Tiefkühlprodukte -18 °C. Marktführer TK-Backwaren CH. Gastro + Retail", ort:"Schlieren",kanton:"ZH",lang:"DE"},
+  {id:"p38", s:"F", firma:"Kadi AG",                      kontakt:"Disponenten",             tel:"—", segment:"TK-Kartoffeln (Rösti)",  status:"Offen", prio:"Hoch",   notiz:"Langenthal BE, Industriestandort, Sattelzug-tauglich. TK-Transport Rösti/Pommes. 170+ Kunden", ort:"Langenthal",kanton:"BE",lang:"DE"},
+  {id:"p39", s:"F", firma:"Romer's Hausbäckerei AG",      kontakt:"Logistikleitung",         tel:"—", segment:"TK-Backwaren / Desserts",status:"Offen", prio:"Hoch",   notiz:"Benken SG + Oberburg BE. Pendelverkehr Benken ↔ Oberburg + CH-weite Belieferung Gastro/Hotels", ort:"Benken",kanton:"SG",lang:"DE"},
+  {id:"p40", s:"F", firma:"Hügli Nährmittel AG (Bell)",   kontakt:"Transportplanung",        tel:"—", segment:"Suppen / Fertiggerichte",status:"Offen", prio:"Mittel",  notiz:"Steinach SG, A1-Nähe. Temp.-geführte Convenience-Produkte. CH + Export", ort:"Steinach",kanton:"SG",lang:"DE"},
+  {id:"p41", s:"F", firma:"Verdunova AG",                 kontakt:"Disposition",             tel:"—", segment:"TK-Gemüse (IQF)",       status:"Offen", prio:"Mittel",  notiz:"Sennwald SG (Rheintal), Autobahnnähe. TK-Gemüse, saisonale Spitzen bei Ernte", ort:"Sennwald",kanton:"SG",lang:"DE"},
+  {id:"p42", s:"F", firma:"Louis Ditzler AG",             kontakt:"Disponenten",             tel:"—", segment:"TK-Gemüse / Marroni",   status:"Offen", prio:"Mittel",  notiz:"Möhlin AG, A3-Nähe. TK-Gemüse + Marroni Saison. «Best Partner» Transgourmet", ort:"Möhlin",kanton:"AG",lang:"DE"},
+  {id:"p43", s:"F", firma:"Mister Cool AG",               kontakt:"Geschäftsleitung",        tel:"—", segment:"Glacé",                  status:"Offen", prio:"Mittel",  notiz:"Zuchwil SO. Grösster privater Glaceproduzent CH. TK -18 °C, saisonale Sommerspitzen", ort:"Zuchwil",kanton:"SO",lang:"DE"},
+  {id:"p44", s:"F", firma:"Kern & Sammet AG",             kontakt:"Logistikverantwortlicher",tel:"—", segment:"TK-Patisserie",          status:"Offen", prio:"Mittel",  notiz:"Stäfa ZH. 100% Tiefkühlprodukte -18 °C. FSSC 22000. Gastro CH-weit", ort:"Stäfa",kanton:"ZH",lang:"DE"},
+  {id:"p45", s:"F", firma:"Guma AG",                      kontakt:"Disponenten",             tel:"—", segment:"Saucen / Desserts (flüssig)",status:"Offen",prio:"Mittel", notiz:"Bilten GL, Industriestandort. Kühlpflichtige Produkte. Gastro + Retail. Seit 1903", ort:"Bilten",kanton:"GL",lang:"DE"},
+  {id:"p46", s:"F", firma:"Deliciel AG",                  kontakt:"Logistikleitung",         tel:"—", segment:"TK-Premium-Patisserie", status:"Offen", prio:"Mittel",  notiz:"Birmenstorf AG. Vollständig auf TK-Transport angewiesen. Grosshandel national", ort:"Birmenstorf",kanton:"AG",lang:"DE"},
+  {id:"p47", s:"F", firma:"Reitzel (Suisse) SA",          kontakt:"Transportplanung",        tel:"—", segment:"Convenience / Konserven",status:"Offen", prio:"Mittel",  notiz:"Aigle VD, Industriestandort, A9-Nähe. Einer der wenigen Convenience-Produzenten Romandie", ort:"Aigle",kanton:"VD",lang:"FR"},
+  // F4: Bäckerei / Confiserie / Schokolade
+  {id:"p48", s:"F", firma:"Coop Grossbäckerei Schafisheim",kontakt:"Transportkoordination",  tel:"—", segment:"Industriebäckerei / TK", status:"Offen", prio:"Hoch",   notiz:"Schafisheim AG. GRÖSSTE Bäckerei CH. 60'000+ t/Jahr. TK-Teiglinge, Cremeschnitten, Torten", ort:"Schafisheim",kanton:"AG",lang:"DE"},
+  {id:"p49", s:"F", firma:"JOWA AG / FFB Group (Migros)", kontakt:"Logistikplanung",         tel:"—", segment:"Industriebäckerei",      status:"Offen", prio:"Hoch",   notiz:"11 Bäckereien CH-weit (ZH, AG, SG, LU, VD, TI). 155'000 t/Jahr. TK-Teiglinge + Frischbrot täglich", ort:"Volketswil",kanton:"ZH",lang:"DE"},
+  {id:"p50", s:"F", firma:"Lindt & Sprüngli AG",          kontakt:"Logistikzentrum",         tel:"—", segment:"Premium-Schokolade",    status:"Offen", prio:"Hoch",   notiz:"Kilchberg ZH. Weltkonzern. Schokolade max. 16–18 °C. Saisonware Ostern/Weihnachten. Enormes Volumen", ort:"Kilchberg",kanton:"ZH",lang:"DE"},
+  {id:"p51", s:"F", firma:"Delica AG / Chocolat Frey",    kontakt:"Transportkoordination",   tel:"—", segment:"Schokolade / Glacé",    status:"Offen", prio:"Hoch",   notiz:"Buchs AG + Meilen ZH. 2 Standorte. Glacé -18 °C + Schokolade temperiert. Sehr grosses Volumen", ort:"Buchs",kanton:"AG",lang:"DE"},
+  {id:"p52", s:"F", firma:"Chocolats Halba (Coop)",       kontakt:"Logistikleitung",         tel:"—", segment:"Industrieschokolade",   status:"Offen", prio:"Hoch",   notiz:"Pratteln BL + Hinwil ZH. Coop-eigene Marke → temp.-kontrollierter Transport für gesamtes Coop-Netz", ort:"Pratteln",kanton:"BL",lang:"DE"},
+  {id:"p53", s:"F", firma:"Nestlé / Cailler",             kontakt:"Transportplanung",        tel:"—", segment:"Schokolade",            status:"Offen", prio:"Mittel",  notiz:"Broc FR. Älteste CH-Schokoladenmarke. Grossvolumen, Saisonware, Export", ort:"Broc",kanton:"FR",lang:"FR"},
+  {id:"p54", s:"F", firma:"Läderach AG",                  kontakt:"Logistik / Servicecenter",tel:"—", segment:"FrischSchoggi / Pralinés",status:"Offen",prio:"Hoch",   notiz:"Bilten GL. HOCHRELEVANT: FrischSchoggi + Pralinés zwingend bei 2–8 °C. 220+ eigene Shops täglich!", ort:"Bilten",kanton:"GL",lang:"DE"},
+  {id:"p55", s:"F", firma:"Confiserie Sprüngli AG",       kontakt:"Logistik Dietikon",       tel:"—", segment:"Frische Confiserie",    status:"Offen", prio:"Hoch",   notiz:"Dietikon ZH (Produktion). Frische Confiserie zwingend 2–8 °C. Tägliche Kühltransporte zu 29 Filialen!", ort:"Dietikon",kanton:"ZH",lang:"DE"},
+  {id:"p56", s:"F", firma:"Maestrani AG",                 kontakt:"Logistikverantwortlicher",tel:"—", segment:"Schokolade (Munz/Minor)",status:"Offen", prio:"Mittel",  notiz:"Flawil SG, Industrieareal, Sattelzug-tauglich. Temp.-Transport Munz/Minor national", ort:"Flawil",kanton:"SG",lang:"DE"},
+  {id:"p57", s:"F", firma:"Chocolats Camille Bloch SA",   kontakt:"Transportplanung",        tel:"—", segment:"Schokolade (Ragusa)",   status:"Offen", prio:"Mittel",  notiz:"Courtelary BE. Ragusa + Torino: Nussfüllungen temperaturempfindlich. Nationale Distribution", ort:"Courtelary",kanton:"BE",lang:"DE"},
+  {id:"p58", s:"F", firma:"Chocolat Bernrain / Stella",   kontakt:"Logistikkoordination",    tel:"—", segment:"Schokolade (Private Label)",status:"Offen",prio:"Mittel", notiz:"Kreuzlingen TG + Giubiasco TI. 2 Standorte + Export 50 Länder. Temp. Transport umfangreich", ort:"Kreuzlingen",kanton:"TG",lang:"DE"},
+  {id:"p59", s:"F", firma:"Chocolat Alprose SA",          kontakt:"Direzione (IT)",          tel:"—", segment:"Schokolade TI",         status:"Offen", prio:"Mittel",  notiz:"Caslano TI. Wichtigster Tessiner Schokoladenproduzent. National + Export. Sommerlieferungen", ort:"Caslano",kanton:"TI",lang:"IT"},
+  {id:"p60", s:"F", firma:"Max Felchlin AG",              kontakt:"Logistikleitung",         tel:"—", segment:"Couverture / Schokolade",status:"Offen", prio:"Mittel",  notiz:"Ibach SZ. B2B Confiserien weltweit. Temperaturempfindliche Couverture, Export 40+ Länder", ort:"Ibach",kanton:"SZ",lang:"DE"},
+  {id:"p61", s:"F", firma:"Villars Maître Chocolatier",   kontakt:"Transportplanung",        tel:"—", segment:"Premium-Schokolade",    status:"Offen", prio:"Mittel",  notiz:"Fribourg FR. Wichtiger Romandie-Produzent. Temp.-kontrollierter Transport CH-weit", ort:"Fribourg",kanton:"FR",lang:"FR"},
+  {id:"p62", s:"F", firma:"Kägi Söhne AG",                kontakt:"Logistikverantwortlicher",tel:"—", segment:"Schokowaffeln",          status:"Offen", prio:"Mittel",  notiz:"Lichtensteig SG. Meistverkaufte CH-Süssigkeit. Schokoüberzug max. 18 °C im Sommer", ort:"Lichtensteig",kanton:"SG",lang:"DE"},
+  {id:"p63", s:"F", firma:"HUG AG (Migros)",              kontakt:"Transportkoordination",   tel:"—", segment:"Biscuits / TK-Backwaren",status:"Offen", prio:"Mittel",  notiz:"Malters LU + Willisau LU + Trimbach SO. 3 Standorte. TK-Backwaren + Tartelettes Foodservice", ort:"Malters",kanton:"LU",lang:"DE"},
+  {id:"p64", s:"F", firma:"Pasta Premium AG",             kontakt:"Logistikleitung",         tel:"—", segment:"Teigwaren",             status:"Offen", prio:"Mittel",  notiz:"Frauenfeld TG. Grösster unabhängiger CH-Teigwarenproduzent. Frischteigwaren mit Kühlbedarf", ort:"Frauenfeld",kanton:"TG",lang:"DE"},
+  {id:"p65", s:"F", firma:"Barry Callebaut Schweiz AG",   kontakt:"Transportplanung",        tel:"—", segment:"Industrieschokolade",   status:"Offen", prio:"Mittel",  notiz:"Zürich/Dübendorf ZH. Weltweit grösster Schokoladenproduzent. B2B, temp.-kontrolliert", ort:"Dübendorf",kanton:"ZH",lang:"DE"},
+];
+
+let contacts = [];
+let currentTab = "list";
+let editingId  = null;
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem("hasli-crm-v3");
+    if (saved) {
+      const savedContacts = JSON.parse(saved);
+      // Keep user edits, but add any new default contacts not yet in saved list
+      const savedIds = new Set(savedContacts.map(c => c.id));
+      const newDefaults = DEFAULT_CONTACTS.filter(c => !savedIds.has(c.id));
+      contacts = [...savedContacts, ...newDefaults];
+    } else {
+      // Also migrate from old key if exists
+      const old = localStorage.getItem("hasli-crm-v2");
+      if (old) {
+        const oldContacts = JSON.parse(old);
+        const oldIds = new Set(oldContacts.map(c => c.id));
+        const newDefaults = DEFAULT_CONTACTS.filter(c => !oldIds.has(c.id));
+        contacts = [...oldContacts, ...newDefaults];
+      } else {
+        contacts = [...DEFAULT_CONTACTS];
+      }
+    }
+  } catch(e) {
+    contacts = [...DEFAULT_CONTACTS];
+  }
+  render();
+}
+
+function saveData() {
+  try {
+    localStorage.setItem("hasli-crm-v3", JSON.stringify(contacts));
+  } catch(e) {}
+  // Auto-sync to Electron shared store
+  if (window.electronAPI && window.electronAPI.sharedWrite) {
+    window.electronAPI.sharedWrite('crm-contacts', contacts).catch(()=>{});
+  }
+}
+
+function getFiltered() {
+  const q    = document.getElementById("fsearch").value.toLowerCase();
+  const sec  = document.getElementById("fsec").value;
+  const prio = document.getElementById("fprio").value;
+  const stat = document.getElementById("fstat").value;
+  const kt = document.getElementById("fkanton").value;
+  return contacts.filter(c => {
+    if (q && ![c.firma, c.kontakt, c.segment, c.notiz, c.ort||"", c.kanton||""].some(x => x.toLowerCase().includes(q))) return false;
+    if (sec  && c.s      !== sec)  return false;
+    if (prio && c.prio   !== prio) return false;
+    if (stat && c.status !== stat) return false;
+    if (kt   && (c.kanton||"")   !== kt)  return false;
+    return true;
+  });
+}
+
+function badgeHtml(status) {
+  const cls = STATUS_CLS[status] || "s-offen";
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+function prioHtml(p) {
+  const cls = p==="Hoch" ? "prio-h" : p==="Mittel" ? "prio-m" : "prio-l";
+  return `<span class="${cls}">${p}</span>`;
+}
+
+function renderStats() {
+  const n = contacts.length;
+  const aktiv = contacts.filter(c => ["Warm","Aktiv","Positiv","Gespräch geführt","Angebot gemacht"].includes(c.status)).length;
+  document.getElementById("stat-bar").innerHTML = [
+    ["Total",      n,                                                             "#fff"],
+    ["Hoch",       contacts.filter(c=>c.prio==="Hoch").length,                   "#86EFAC"],
+    ["Aktiv/Pos.", aktiv,                                                          "#FDE047"],
+    ["Offen",      contacts.filter(c=>c.status==="Offen").length,                "#93B5D5"],
+    ["Tessin 🇮🇹", contacts.filter(c=>c.s==="E1").length,                        "#FCA5A5"],
+  ].map(([l,v,c]) => `<div class="stat"><div class="stat-n" style="color:${c}">${v}</div><div class="stat-l">${l}</div></div>`).join("");
+}
+
+function renderList(filtered) {
+  const tbody = document.getElementById("tbl-body");
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:28px;color:#9CA3AF;font-size:13px">Keine Einträge gefunden</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(c => {
+    const statusSel = STATUS_OPTIONS.map(s => `<option value="${s}"${s===c.status?' selected':''}>${s}</option>`).join('');
+    const tel = c.tel !== '—' ? `<div class="kontakt-tel">${esc(c.tel)}</div>` : '';
+    const flag = FLAGS[c.lang] ? ` <span class="flag">${FLAGS[c.lang]}</span>` : '';
+    const inlineStyle = STATUS_STYLE_INLINE[c.status] || '';
+    const selCls = STATUS_CLS[c.status] || 's-offen';
+    return `<tr id="lrow-${c.id}" draggable="true"
+      ondragstart="listDragStart(event,'${c.id}')"
+      ondragend="listDragEnd(event)"
+      ondragover="listDragOver(event)"
+      ondragenter="listDragEnter(event)"
+      ondragleave="listDragLeave(event)"
+      ondrop="listDrop(event,'${c.id}')"
+      onclick="openModal('${c.id}')">
+      <td onclick="event.stopPropagation()" style="padding:0 4px;width:20px">
+        <span class="list-drag-handle" title="Ziehen zum Sortieren">&#8942;</span>
+      </td>
+      <td>
+        <div class="firma-name">${esc(c.firma)}${flag}</div>
+        <div class="sec-row"><span class="sec-dot" style="background:${SEC_COLORS[c.s]}"></span><span class="sec-lbl">${SEC_LABELS[c.s]}</span></div>
+      </td>
+      <td style="font-size:11px;color:#374151;white-space:nowrap">${esc(c.ort||'—')}</td>
+      <td><span style="font-size:10px;font-weight:700;background:#EFF6FF;color:#1E40AF;padding:2px 6px;border-radius:5px;border:1px solid #BFDBFE">${esc(c.kanton||'—')}</span></td>
+      <td><div class="kontakt-main">${esc(c.kontakt)}</div>${tel}</td>
+      <td onclick="event.stopPropagation()">
+        <select class="status-select ${selCls}" onchange="changeStatus('${c.id}',this.value)" style="${inlineStyle}">
+          ${statusSel}
+        </select>
+      </td>
+      <td>${prioHtml(c.prio)}</td>
+      <td class="notiz-cell" title="${esc(c.notiz)}">${esc(c.notiz.replace(/^★\s*/,''))}</td>
+      <td><button class="edit-btn" onclick="event.stopPropagation();openModal('${c.id}')">Bearbeiten</button></td>
+    </tr>`;
+  }).join("");
+}
+
+let listDragId = null;
+
+function listDragStart(e, id) {
+  listDragId = id;
+  e.dataTransfer.effectAllowed = "move";
+  setTimeout(() => { const r = document.getElementById("lrow-"+id); if(r) r.classList.add("dragging"); }, 0);
+}
+
+function listDragEnd(e) {
+  document.querySelectorAll("tbody tr").forEach(r => r.classList.remove("dragging","drag-over-top","drag-over-bottom"));
+  listDragId = null;
+}
+
+function listDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.classList.toggle("drag-over-top",    e.clientY < rect.top + rect.height/2);
+  e.currentTarget.classList.toggle("drag-over-bottom", e.clientY >= rect.top + rect.height/2);
+}
+
+function listDragEnter(e) { e.preventDefault(); }
+
+function listDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget))
+    e.currentTarget.classList.remove("drag-over-top","drag-over-bottom");
+}
+
+function listDrop(e, targetId) {
+  e.preventDefault();
+  if (!listDragId || listDragId === targetId) return;
+  document.querySelectorAll("tbody tr").forEach(r => r.classList.remove("drag-over-top","drag-over-bottom"));
+  const fromIdx = contacts.findIndex(c => c.id === listDragId);
+  const toIdx   = contacts.findIndex(c => c.id === targetId);
+  if (fromIdx === -1 || toIdx === -1) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const insertAfter = e.clientY >= rect.top + rect.height/2;
+  const [moved] = contacts.splice(fromIdx, 1);
+  const newIdx = contacts.findIndex(c => c.id === targetId);
+  contacts.splice(insertAfter ? newIdx+1 : newIdx, 0, moved);
+  listDragId = null;
+  saveData();
+  render();
+}
+function renderKanban(filtered) {
+  const COLS = ["Offen","Warm","E-Mail gesandt","Gespräch geführt","Positiv","Angebot gemacht","Abgeschlossen"];
+  const board = document.getElementById("kanban-board");
+  board.innerHTML = COLS.map(col => {
+    const cards = filtered.filter(c => c.status === col);
+    const cls = STATUS_CLS[col] || "s-offen";
+    const cardsHtml = cards.length
+      ? cards.map(c => `
+          <div class="k-card" id="kcard-${c.id}"
+            draggable="true"
+            ondragstart="dragStart(event,'${c.id}')"
+            ondragend="dragEnd(event)"
+            onclick="if(!wasDragged)openModal('${c.id}')">
+            <div class="k-drag-handle" title="Ziehen zum Verschieben">&#8942;</div>
+            <div class="k-card-name">${esc(c.firma)}${FLAGS[c.lang] ? " " + FLAGS[c.lang] : ""}</div>
+            <div class="k-card-seg">${esc(c.segment)}</div>
+            <div style="font-size:10px;color:#9CA3AF;margin:2px 0">${esc(c.ort||"")} ${c.kanton ? "· " + esc(c.kanton) : ""}</div>
+            <div class="k-card-foot">
+              <span class="sec-dot" style="background:${SEC_COLORS[c.s]};display:inline-block;width:7px;height:7px;border-radius:50%"></span>
+              ${prioHtml(c.prio)}
+            </div>
+          </div>`).join("")
+      : `<div class="k-empty">Hierher ziehen</div>`;
+    return `<div class="k-col">
+      <div class="k-col-hdr">
+        <span class="badge ${cls}" style="font-size:10px">${col}</span>
+        <span class="k-cnt">${cards.length}</span>
+      </div>
+      <div class="k-drop-zone" data-col="${col}"
+        ondragover="dragOver(event)"
+        ondragenter="dragEnter(event)"
+        ondragleave="dragLeave(event)"
+        ondrop="drop(event,'${col}')"
+      >${cardsHtml}</div>
+    </div>`;
+  }).join("");
+}
+
+let dragId = null;
+let wasDragged = false;
+
+function dragStart(e, id) {
+  dragId = id;
+  wasDragged = false;
+  e.dataTransfer.effectAllowed = "move";
+  setTimeout(() => {
+    const el = document.getElementById("kcard-" + id);
+    if (el) { el.style.opacity = "0.4"; el.style.transform = "scale(0.97)"; }
+  }, 0);
+}
+
+function dragEnd(e) {
+  wasDragged = (dragId !== null);
+  setTimeout(() => { wasDragged = false; }, 100);
+  if (dragId) {
+    const el = document.getElementById("kcard-" + dragId);
+    if (el) { el.style.opacity = "1"; el.style.transform = ""; }
+  }
+  document.querySelectorAll(".k-drop-zone").forEach(z => z.classList.remove("k-drop-over"));
+}
+
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+}
+
+function dragEnter(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add("k-drop-over");
+}
+
+function dragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    e.currentTarget.classList.remove("k-drop-over");
+  }
+}
+
+function drop(e, newStatus) {
+  e.preventDefault();
+  e.currentTarget.classList.remove("k-drop-over");
+  if (!dragId) return;
+  const c = contacts.find(x => x.id === dragId);
+  if (!c || c.status === newStatus) { dragId = null; return; }
+  contacts = contacts.map(x => x.id === dragId ? {...x, status: newStatus} : x);
+  dragId = null;
+  saveData();
+  render();
+}
+
+function renderStatsView() {
+  const n = contacts.length;
+  // Section bars
+  const secRows = Object.entries(SEC_COLORS).map(([k,col]) => {
+    const cnt = contacts.filter(c=>c.s===k).length;
+    const pct = n ? Math.round(cnt/n*100) : 0;
+    return `<div class="bar-row">
+      <div class="bar-lbl"><span class="bar-lbl-name">${SEC_LABELS[k]}</span><span class="bar-lbl-n">${cnt}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  }).join("");
+  // Status list
+  const statuses = ["Warm","Aktiv","Positiv","Gespräch geführt","Angebot gemacht","E-Mail gesandt","Ausstehend","Offen","Abgeschlossen","Kein Interesse"];
+  const statRows = statuses.filter(s => contacts.some(c=>c.status===s)).map(s => {
+    const cnt = contacts.filter(c=>c.status===s).length;
+    return `<div class="status-row">${badgeHtml(s)}<strong style="font-size:13px">${cnt}</strong></div>`;
+  }).join("");
+  // Tessin
+  const tiRows = contacts.filter(c=>c.s==="E1").map(c =>
+    `<div class="ti-row"><span class="ti-firma">${esc(c.firma)}</span>${badgeHtml(c.status)}</div>`
+  ).join("");
+  // Prio bars
+  const prioRows = [["Hoch","#166534"],["Mittel","#1D4ED8"],["Niedrig","#9CA3AF"]].map(([p,col]) => {
+    const cnt = contacts.filter(c=>c.prio===p).length;
+    const pct = n ? Math.round(cnt/n*100) : 0;
+    return `<div class="bar-row">
+      <div class="bar-lbl">
+        <span style="font-weight:700;color:${col};font-size:12px">${p}</span>
+        <span style="font-size:11px;color:#6B7280">${cnt} (${pct}%)</span>
+      </div>
+      <div class="bar-track" style="height:10px"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("stats-content").innerHTML = `
+    <div class="stats-card"><h3>Kontakte nach Sektion</h3>${secRows}</div>
+    <div class="stats-card"><h3>Status-Übersicht</h3>${statRows}</div>
+    <div class="ti-card"><div class="ti-card-hdr">🇮🇹 Tessin-Fokus — Sprachvorteil Italiano (Vater)</div><div>${tiRows}</div></div>
+    <div class="stats-card" style="grid-column:1/-1"><h3>Priorität-Übersicht</h3>${prioRows}</div>`;
+}
+
+function render() {
+  const filtered = getFiltered();
+  document.getElementById("fcnt").textContent = filtered.length + " Kontakte";
+  renderStats();
+  if (currentTab === "list")   renderList(filtered);
+  if (currentTab === "kanban") renderKanban(filtered);
+  if (currentTab === "stats")  renderStatsView();
+  if (currentTab === "netz")   renderNetz();
+}
+
+function switchTab(t) {
+  currentTab = t;
+  document.querySelectorAll(".view").forEach(el => el.classList.toggle("active", el.id === "view-" + t));
+  document.querySelectorAll(".tab").forEach((el,i) => el.classList.toggle("on", ["list","kanban","stats","netz"][i]===t));
+  if (t === "netz") {
+    setTimeout(renderNetz, 50);
+  } else {
+    const inp = document.getElementById("netz-search");
+    if (inp) { inp.value = ""; netzSearch(""); }
+    render();
+  }
+}
+
+function openModal(id) {
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  document.getElementById("m-firma").textContent   = c.firma;
+  document.getElementById("m-sec").textContent     = SEC_LABELS[c.s] || c.s;
+  document.getElementById("m-f-firma").value       = c.firma;
+  document.getElementById("m-f-kontakt").value     = c.kontakt;
+  document.getElementById("m-f-tel").value         = c.tel;
+  document.getElementById("m-f-status").value      = c.status;
+  document.getElementById("m-f-prio").value        = c.prio;
+  document.getElementById("m-f-notiz").value       = c.notiz;
+  document.getElementById("m-f-sec").value         = c.s;
+  document.getElementById("m-f-lang").value        = c.lang || "DE";
+  document.getElementById("btn-delete").style.display = "block";
+  document.getElementById("modal").classList.add("open");
+}
+
+function openNew() {
+  editingId = null;
+  document.getElementById("m-firma").textContent  = "Neue Firma";
+  document.getElementById("m-sec").textContent    = "Neuer Eintrag";
+  document.getElementById("m-f-firma").value      = "";
+  document.getElementById("m-f-kontakt").value    = "";
+  document.getElementById("m-f-tel").value        = "—";
+  document.getElementById("m-f-status").value     = "Offen";
+  document.getElementById("m-f-prio").value       = "Hoch";
+  document.getElementById("m-f-notiz").value      = "";
+  document.getElementById("m-f-sec").value        = "A";
+  document.getElementById("m-f-lang").value       = "DE";
+  document.getElementById("m-f-ort").value        = "";
+  document.getElementById("m-f-kanton").value     = "";
+  document.getElementById("btn-delete").style.display = "none";
+  document.getElementById("modal").classList.add("open");
+  setTimeout(() => document.getElementById("m-f-firma").focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("open");
+  editingId = null;
+}
+
+function saveContact() {
+  const firma = document.getElementById("m-f-firma").value.trim();
+  if (!firma) { alert("Bitte Firmenname eingeben."); return; }
+  if (editingId) {
+    // Update existing
+    contacts = contacts.map(c => {
+      if (c.id !== editingId) return c;
+      return { ...c,
+        firma:   firma,
+        kontakt: document.getElementById("m-f-kontakt").value,
+        tel:     document.getElementById("m-f-tel").value,
+        status:  document.getElementById("m-f-status").value,
+        prio:    document.getElementById("m-f-prio").value,
+        notiz:   document.getElementById("m-f-notiz").value,
+      ort:     document.getElementById("m-f-ort").value,
+      kanton:  document.getElementById("m-f-kanton").value,
+        s:       document.getElementById("m-f-sec").value,
+        lang:    document.getElementById("m-f-lang").value,
+      };
+    });
+  } else {
+    // Add new
+    const newContact = {
+      id:      "u" + Date.now(),
+      s:       document.getElementById("m-f-sec").value,
+      firma:   firma,
+      kontakt: document.getElementById("m-f-kontakt").value || "—",
+      tel:     document.getElementById("m-f-tel").value || "—",
+      segment: "",
+      status:  document.getElementById("m-f-status").value,
+      prio:    document.getElementById("m-f-prio").value,
+      notiz:   document.getElementById("m-f-notiz").value,
+      ort:     document.getElementById("m-f-ort").value,
+      kanton:  document.getElementById("m-f-kanton").value,
+      lang:    document.getElementById("m-f-lang").value,
+    };
+    contacts.push(newContact);
+  }
+  saveData();
+  closeModal();
+  render();
+}
+
+function deleteContact() {
+  if (!editingId) return;
+  const c = contacts.find(x => x.id === editingId);
+  if (!c) return;
+  if (!confirm(`"${c.firma}" wirklich löschen?`)) return;
+  contacts = contacts.filter(x => x.id !== editingId);
+  saveData();
+  closeModal();
+  render();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// NETZWERK — Interaktive Beziehungsmap
+// ════════════════════════════════════════════════════════════════════════════
+
+const LINK_TYPES = {
+  "lieferant":  { color: "#166534", label: "Lieferant von" },
+  "sub":        { color: "#1E40AF", label: "Subunternehmer" },
+  "konkurrent": { color: "#9A3412", label: "Konkurrent" },
+  "partner":    { color: "#6B21A8", label: "Partner" },
+  "sonstig":    { color: "#6B7280", label: "Sonstiges" },
+};
+
+// Start with empty links — user creates all connections manually
+const DEFAULT_LINKS = [];
+
+let netzLinks = [];
+let netzPositions = {}; // id -> {x, y}
+let netzMode = "normal"; // normal | addlink | dellink
+let netzLinkFrom = null;
+let netzSelected = null;
+let netzDragNode = null;
+let netzDragOffset = {x:0, y:0};
+
+async function loadNetzData() {
+  try {
+    const r = await window.storage.get("crm-netz-v1");
+    if (r && r.value) {
+      const d = JSON.parse(r.value);
+      netzLinks = d.links || [...DEFAULT_LINKS];
+      netzPositions = d.positions || {};
+    } else {
+      netzLinks = [...DEFAULT_LINKS];
+      netzPositions = {};
+    }
+  } catch(e) {
+    netzLinks = [...DEFAULT_LINKS];
+    netzPositions = {};
+  }
+}
+
+async function saveNetzData() {
+  try {
+    await window.storage.set("crm-netz-v1", JSON.stringify({links: netzLinks, positions: netzPositions}));
+  } catch(e) {}
+}
+
+function getVisibleContacts() {
+  // Always show ALL contacts — user needs to see all to create connections
+  return contacts;
+}
+
+function initPositions() {
+  const visible = getVisibleContacts();
+  const W = document.getElementById("netz-container").offsetWidth || 900;
+  const H = document.getElementById("netz-container").offsetHeight || 600;
+  
+  // Group by section for initial layout
+  const sections = {};
+  visible.forEach(c => {
+    if (!sections[c.s]) sections[c.s] = [];
+    sections[c.s].push(c);
+  });
+  
+  const sKeys = Object.keys(sections);
+  sKeys.forEach((s, si) => {
+    const angle = (si / sKeys.length) * Math.PI * 2;
+    const cx = W/2 + Math.cos(angle) * W * 0.3;
+    const cy = H/2 + Math.sin(angle) * H * 0.28;
+    sections[s].forEach((c, i) => {
+      if (!netzPositions[c.id]) {
+        const spread = 80;
+        const a2 = (i / Math.max(sections[s].length,1)) * Math.PI * 2;
+        netzPositions[c.id] = {
+          x: Math.max(80, Math.min(W-80, cx + Math.cos(a2)*spread*(i>0?1:0))),
+          y: Math.max(50, Math.min(H-50, cy + Math.sin(a2)*spread*(i>0?1:0)))
+        };
+      }
+    });
+  });
+}
+
+function pointToSegmentDist(px, py, ax, ay, bx, by) {
+  const dx = bx-ax, dy = by-ay;
+  const lenSq = dx*dx+dy*dy;
+  if (lenSq === 0) return Math.hypot(px-ax, py-ay);
+  let t = ((px-ax)*dx + (py-ay)*dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax+t*dx), py - (ay+t*dy));
+}
+
+function drawCanvas() {
+  const container = document.getElementById("netz-container");
+  const canvas = document.getElementById("netz-canvas");
+  if (!canvas || !container) return;
+  canvas.width  = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  netzLinks.forEach((link, li) => {
+    const fp = netzPositions[link.from];
+    const tp = netzPositions[link.to];
+    if (!fp || !tp) return;
+    const lt = LINK_TYPES[link.type] || LINK_TYPES["sonstig"];
+    const isHovered = (netzHoveredLink === li);
+    ctx.beginPath();
+    ctx.moveTo(fp.x, fp.y);
+    ctx.lineTo(tp.x, tp.y);
+    ctx.strokeStyle = isHovered && netzMode==="dellink" ? "#EF4444" : lt.color;
+    ctx.lineWidth = isHovered ? 4 : 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+    // Arrow
+    const dx = tp.x - fp.x, dy = tp.y - fp.y;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    if (len > 40) {
+      const ux = dx/len, uy = dy/len;
+      const mx = fp.x + ux * (len-28), my = fp.y + uy * (len-28);
+      const size = 7;
+      ctx.beginPath();
+      ctx.moveTo(mx + ux*size, my + uy*size);
+      ctx.lineTo(mx - uy*size*0.6, my + ux*size*0.6);
+      ctx.lineTo(mx + uy*size*0.6, my - ux*size*0.6);
+      ctx.closePath();
+      ctx.fillStyle = isHovered && netzMode==="dellink" ? "#EF4444" : lt.color;
+      ctx.fill();
+    }
+    // Label in middle
+    if (link.label) {
+      const mx2 = (fp.x+tp.x)/2, my2 = (fp.y+tp.y)/2;
+      ctx.font = "10px system-ui";
+      ctx.fillStyle = "#6B7280";
+      ctx.textAlign = "center";
+      ctx.fillText(link.label, mx2, my2-6);
+    }
+  });
+}
+
+let netzHoveredLink = -1;
+
+function setupCanvasEvents() {
+  const canvas = document.getElementById("netz-canvas");
+  if (!canvas) return;
+  canvas.addEventListener("mousemove", (e) => {
+    if (netzMode !== "dellink") { if (netzHoveredLink !== -1) { netzHoveredLink=-1; drawCanvas(); } return; }
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    let found = -1;
+    netzLinks.forEach((link, i) => {
+      const fp = netzPositions[link.from], tp = netzPositions[link.to];
+      if (!fp || !tp) return;
+      if (pointToSegmentDist(mx, my, fp.x, fp.y, tp.x, tp.y) < 10) found = i;
+    });
+    if (found !== netzHoveredLink) { netzHoveredLink = found; drawCanvas(); }
+    canvas.style.cursor = found !== -1 ? "pointer" : "default";
+  });
+  canvas.addEventListener("click", (e) => {
+    if (netzMode !== "dellink" || netzHoveredLink === -1) return;
+    if (confirm("Diese Verbindung löschen?")) {
+      netzLinks.splice(netzHoveredLink, 1);
+      netzHoveredLink = -1;
+      saveNetzData();
+      renderNetz();
+    }
+  });
+}
+
+function buildNetzNodes() {
+  const nodesDiv = document.getElementById("netz-nodes");
+  if (!nodesDiv) return;
+  const visible = getVisibleContacts();
+  nodesDiv.innerHTML = "";
+  
+  visible.forEach(c => {
+    const pos = netzPositions[c.id] || {x:200, y:200};
+    const div = document.createElement("div");
+    div.className = "netz-node" + (netzSelected === c.id ? " selected" : "");
+    div.id = "nnode-" + c.id;
+    div.style.left = pos.x + "px";
+    div.style.top  = pos.y + "px";
+    
+    const dotColor = SEC_COLORS[c.s] || "#1F3864";
+    div.innerHTML = `<div class="netz-node-inner" style="border-color:${dotColor}">
+      <b title="${esc(c.firma)}">${esc(c.firma.length>18 ? c.firma.slice(0,17)+"…" : c.firma)}</b>
+      <small>${esc(c.segment||"")}</small>
+      <small style="color:${dotColor}">${c.kanton||""}</small>
+    </div>`;
+    
+    // Click
+    div.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (netzMode === "addlink") {
+        if (!netzLinkFrom) {
+          netzLinkFrom = c.id;
+          div.classList.add("selected");
+          document.getElementById("netz-hint").textContent = "Jetzt Zielfirma klicken";
+        } else if (netzLinkFrom !== c.id) {
+          // Show type selector
+          const type = prompt("Verbindungstyp:\n1=Lieferant von  2=Subunternehmer  3=Partner  4=Konkurrent  5=Sonstiges\nNummer eingeben:", "1");
+          const typeMap = {"1":"lieferant","2":"sub","3":"partner","4":"konkurrent","5":"sonstig"};
+          const t = typeMap[type] || "sonstig";
+          const label = prompt("Beschriftung (optional):", "");
+          netzLinks.push({from: netzLinkFrom, to: c.id, type: t, label: label||""});
+          netzLinkFrom = null;
+          netzMode = "normal";
+          document.getElementById("btn-addlink").classList.remove("active");
+          document.getElementById("netz-hint").textContent = "";
+          saveNetzData();
+          renderNetz();
+        }
+      } else if (netzMode === "dellink") {
+        // Find links connected to this node and let user pick
+        const myLinks = netzLinks.filter(l => l.from === c.id || l.to === c.id);
+        if (!myLinks.length) { alert("Keine Verbindungen gefunden."); return; }
+        const choices = myLinks.map((l,i) => {
+          const other = contacts.find(x => x.id === (l.from===c.id?l.to:l.from));
+          return `${i+1}: ${l.from===c.id?"→":"←"} ${other?other.firma:"?"} (${LINK_TYPES[l.type]?.label||l.type})`;
+        }).join("\n");
+        const sel = prompt("Welche Verbindung löschen?\n" + choices + "\nNummer eingeben:");
+        const idx = parseInt(sel) - 1;
+        if (idx >= 0 && idx < myLinks.length) {
+          const toRemove = myLinks[idx];
+          // Find by index in netzLinks (not by reference which breaks after JSON parse)
+          const globalIdx = netzLinks.findIndex(l =>
+            l.from === toRemove.from && l.to === toRemove.to && l.type === toRemove.type && l.label === toRemove.label
+          );
+          if (globalIdx !== -1) netzLinks.splice(globalIdx, 1);
+          saveNetzData();
+          renderNetz();
+        }
+      } else {
+        netzSelected = netzSelected === c.id ? null : c.id;
+        renderNetz();
+      }
+    });
+    
+    // Drag
+    div.addEventListener("mousedown", (e) => {
+      if (netzMode !== "normal") return;
+      e.preventDefault();
+      netzDragNode = c.id;
+      const container = document.getElementById("netz-container");
+      const rect = container.getBoundingClientRect();
+      netzDragOffset = {
+        x: e.clientX - rect.left - pos.x,
+        y: e.clientY - rect.top  - pos.y
+      };
+      div.style.cursor = "grabbing";
+    });
+    
+    nodesDiv.appendChild(div);
+  });
+  
+  // Global mouse events
+  const container = document.getElementById("netz-container");
+  container.onmousemove = (e) => {
+    if (!netzDragNode) return;
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left - netzDragOffset.x;
+    const y = e.clientY - rect.top  - netzDragOffset.y;
+    netzPositions[netzDragNode] = {
+      x: Math.max(70, Math.min(rect.width-70, x)),
+      y: Math.max(40, Math.min(rect.height-40, y))
+    };
+    const el = document.getElementById("nnode-" + netzDragNode);
+    if (el) { el.style.left = netzPositions[netzDragNode].x + "px"; el.style.top = netzPositions[netzDragNode].y + "px"; }
+    drawCanvas();
+  };
+  container.onmouseup = () => {
+    if (netzDragNode) { saveNetzData(); netzDragNode = null; }
+    document.querySelectorAll(".netz-node").forEach(n => n.style.cursor = "grab");
+  };
+  container.onmouseleave = () => { if (netzDragNode) { saveNetzData(); netzDragNode = null; } };
+  setupCanvasEvents();
+}
+
+function renderNetz() {
+  if (!netzPositionsLoaded) { loadNetzData().then(() => { netzPositionsLoaded=true; initPositions(); buildNetzNodes(); drawCanvas(); }); return; }
+  initPositions();
+  buildNetzNodes();
+  drawCanvas();
+}
+
+let netzPositionsLoaded = false;
+
+function netzSearch(q) {
+  const btn = document.getElementById("netz-search-clear");
+  if (btn) btn.style.display = q ? "block" : "none";
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll(".netz-node").forEach(el => {
+    el.classList.remove("highlighted","dimmed");
+    if (!term) return;
+    const id = el.id.replace("nnode-","");
+    const c  = contacts.find(x => x.id === id);
+    if (!c) return;
+    const match = [c.firma, c.segment, c.ort||"", c.kanton||"", c.kontakt]
+      .some(v => v.toLowerCase().includes(term));
+    el.classList.toggle("highlighted", match);
+    el.classList.toggle("dimmed", !match);
+  });
+}
+
+function netzClearSearch() {
+  const inp = document.getElementById("netz-search");
+  if (inp) { inp.value = ""; netzSearch(""); inp.focus(); }
+}
+
+function netzReset() {
+  netzPositions = {};
+  initPositions();
+  buildNetzNodes();
+  drawCanvas();
+}
+
+function netzAddLink() {
+  netzMode = netzMode === "addlink" ? "normal" : "addlink";
+  netzLinkFrom = null;
+  document.getElementById("btn-addlink").classList.toggle("active", netzMode==="addlink");
+  document.getElementById("btn-dellink").classList.remove("active");
+  document.getElementById("netz-hint").textContent = netzMode==="addlink" ? "Erste Firma klicken (Quelle)" : "";
+  if (netzMode !== "addlink") netzMode = "normal";
+}
+
+function netzDeleteLink() {
+  netzMode = netzMode === "dellink" ? "normal" : "dellink";
+  netzLinkFrom = null;
+  document.getElementById("btn-dellink").classList.toggle("active", netzMode==="dellink");
+  document.getElementById("btn-addlink").classList.remove("active");
+  document.getElementById("netz-hint").textContent = netzMode==="dellink" ? "Verbindungslinie anklicken zum Löschen" : "";
+}
+
+window.addEventListener("resize", () => { if (currentTab==="netz") { buildNetzNodes(); drawCanvas(); } });
+
+// Listen for sync requests from Desktop shell
+window.addEventListener('message', async (e) => {
+  const raw = localStorage.getItem('hasli-crm-v3') || localStorage.getItem('hasli-crm-v2');
+  const contacts = raw ? JSON.parse(raw) : [];
+  
+  if (e.data?.type === 'request-contacts') {
+    window.parent.postMessage({ type: 'contacts-response', contacts }, '*');
+  }
+  
+  if (e.data?.type === 'save-to-shared') {
+    // Save to shared store via Electron API (if available)
+    if (window.electronAPI?.sharedWrite) {
+      await window.electronAPI.sharedWrite('crm-contacts', contacts);
+    }
+    // Also respond via postMessage as fallback
+    window.parent.postMessage({ type: 'contacts-response', contacts }, '*');
+  }
+});
+
+// Init
+loadData();
+
+// Desktop sync: write contacts to shared store when app loads
+// This runs after loadData() populates contacts[]
+setTimeout(() => {
+  if (window.electronAPI && window.electronAPI.sharedWrite && contacts.length) {
+    window.electronAPI.sharedWrite('crm-contacts', contacts).catch(()=>{});
+  }
+}, 500);
+</script>
+</body>
+</html>
