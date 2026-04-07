@@ -473,10 +473,11 @@ function loadData() {
 function saveData() {
   try {
     localStorage.setItem("hasli-crm-v3", JSON.stringify(contacts));
-    const t = document.getElementById("toast");
-    t.classList.add("show");
-    setTimeout(() => t.classList.remove("show"), 1800);
   } catch(e) {}
+  // Auto-sync to Electron shared store
+  if (window.electronAPI && window.electronAPI.sharedWrite) {
+    window.electronAPI.sharedWrite('crm-contacts', contacts).catch(()=>{});
+  }
 }
 
 function getFiltered() {
@@ -1189,8 +1190,35 @@ function netzDeleteLink() {
 
 window.addEventListener("resize", () => { if (currentTab==="netz") { buildNetzNodes(); drawCanvas(); } });
 
+// Listen for sync requests from Desktop shell
+window.addEventListener('message', async (e) => {
+  const raw = localStorage.getItem('hasli-crm-v3') || localStorage.getItem('hasli-crm-v2');
+  const contacts = raw ? JSON.parse(raw) : [];
+  
+  if (e.data?.type === 'request-contacts') {
+    window.parent.postMessage({ type: 'contacts-response', contacts }, '*');
+  }
+  
+  if (e.data?.type === 'save-to-shared') {
+    // Save to shared store via Electron API (if available)
+    if (window.electronAPI?.sharedWrite) {
+      await window.electronAPI.sharedWrite('crm-contacts', contacts);
+    }
+    // Also respond via postMessage as fallback
+    window.parent.postMessage({ type: 'contacts-response', contacts }, '*');
+  }
+});
+
 // Init
 loadData();
+
+// Desktop sync: write contacts to shared store when app loads
+// This runs after loadData() populates contacts[]
+setTimeout(() => {
+  if (window.electronAPI && window.electronAPI.sharedWrite && contacts.length) {
+    window.electronAPI.sharedWrite('crm-contacts', contacts).catch(()=>{});
+  }
+}, 500);
 </script>
 </body>
 </html>
