@@ -179,7 +179,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#F0F4F8;min-heigh
   <div class="card">
     <div class="card-title">📋 Auftragskopf</div>
     <div class="form-grid col4">
-      <div class="fg"><label>Auftragsnummer*</label><input id="f-nr" placeholder="z.B. HT-2026-001" readonly></div>
+      <div class="fg"><label>Auftragsnummer*</label><input id="f-nr" placeholder="z.B. HT202604160001"></div>
       <div class="fg"><label>Datum*</label><input id="f-datum" type="date"></div>
       <div class="fg"><label>Status</label>
         <select id="f-status">
@@ -196,7 +196,9 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#F0F4F8;min-heigh
       <div class="card-title">🏢 Auftraggeber</div>
       <div class="form-grid">
         <div class="fg"><label>Firma* <span id="sync-status" style="font-weight:400;color:#9CA3AF;font-size:10px"></span></label>
-          <input id="f-ag-firma" placeholder="Firmenname (aus CRM oder manuell)" list="ag-list"><datalist id="ag-list"></datalist>
+          <input id="f-ag-firma" placeholder="Firmenname aus CRM wählen…" list="ag-list" 
+  onchange="autofillFromCRM(this.value)"
+  oninput="if(this.value.length>2) setTimeout(()=>autofillFromCRM(this.value),500)"><datalist id="ag-list"></datalist>
         </div>
         <div class="fg"><label>Kontakt</label><input id="f-ag-kontakt" placeholder="Hr. / Fr. …"></div>
         <div class="fg"><label>Telefon</label><input id="f-ag-tel" placeholder="+41…"></div>
@@ -320,19 +322,78 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#F0F4F8;min-heigh
 
   <!-- Preisberechnung -->
   <div class="card">
-    <div class="card-title">💰 Preisberechnung</div>
-    <div class="form-grid col4">
-      <div class="fg"><label>Grundtarif CHF</label><input id="f-preis-basis" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
-      <div class="fg"><label>Km-Zuschlag (CHF/km)</label><input id="f-preis-km" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
-      <div class="fg"><label>km (gerundet)</label><input id="f-km" type="number" placeholder="0" oninput="calcPreis()"></div>
-      <div class="fg"><label>ADR-Zuschlag CHF</label><input id="f-preis-adr" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>💰 Preisberechnung (ASTAG-Grundlage)</span>
+      <button type="button" onclick="importASTAG()" 
+        style="padding:5px 12px;font-size:11px;font-weight:600;background:#1F3864;color:#fff;border:none;border-radius:7px;cursor:pointer"
+        title="ASTAG PDF-Kalkulation einlesen">📄 ASTAG PDF importieren</button>
     </div>
+
+    <!-- Zeile 1: Distanz & Gewicht -->
+    <div class="form-grid col4">
+      <div class="fg"><label>Distanz km</label><input id="f-km" type="number" placeholder="0" oninput="calcPreis()"></div>
+      <div class="fg"><label>Gewicht kg</label><input id="f-gewicht" type="number" placeholder="0" oninput="calcPreis()"></div>
+      <div class="fg"><label>EUR-Paletten</label><input id="f-paletten" type="number" placeholder="0" oninput="calcPreis()"></div>
+      <div class="fg"><label>Frachtsatz CHF/100kg</label><input id="f-frachtsatz" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
+    </div>
+
+    <!-- Zeile 2: Zwischensumme & Zuschläge % -->
     <div class="form-grid col4 mt8">
-      <div class="fg"><label>Kühl-Zuschlag CHF</label><input id="f-preis-kuehl" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
-      <div class="fg"><label>Standzeit (CHF)</label><input id="f-preis-stand" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
-      <div class="fg"><label>Rabatt CHF</label><input id="f-preis-rabatt" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
-      <div class="fg"><label>Gesamtpreis CHF (exkl. MwSt.)</label>
-        <input id="f-preis-total" type="number" step="0.01" style="font-weight:700;color:var(--navy);font-size:15px" readonly>
+      <div class="fg"><label>Zwischensumme CHF</label><input id="f-preis-basis" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()" style="color:#1F3864;font-weight:600"></div>
+      <div class="fg"><label>Stauzuschlag %</label><input id="f-stau-pct" type="number" step="0.1" placeholder="0" value="8" oninput="calcPreis()"></div>
+      <div class="fg"><label>Treibstoffzuschlag %</label><input id="f-treib-pct" type="number" step="0.1" placeholder="0" value="3" oninput="calcPreis()"></div>
+      <div class="fg"><label>Zuschlag / Rabatt %</label><input id="f-rabatt-pct" type="number" step="1" placeholder="0" value="-60" oninput="calcPreis()" style="color:#DC2626"></div>
+    </div>
+
+    <!-- Zeile 3: Zusatzleistungen CHF -->
+    <div class="form-grid col4 mt8">
+      <div class="fg"><label>ADR-Zuschlag CHF</label><input id="f-preis-adr" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
+      <div class="fg"><label>Kühlzuschlag CHF</label><input id="f-preis-kuehl" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
+      <div class="fg"><label>Standzeit CHF</label><input id="f-preis-stand" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
+      <div class="fg"><label>Weitere Zusätze CHF</label><input id="f-preis-extra" type="number" step="0.01" placeholder="0.00" oninput="calcPreis()"></div>
+    </div>
+
+    <!-- Zeile 4: Ergebnis -->
+    <div class="form-grid col4 mt8" style="background:#F0F4F8;border-radius:8px;padding:10px">
+      <div class="fg"><label>Frachtbetrag Netto CHF</label>
+        <input id="f-preis-netto" type="number" step="0.01" readonly style="font-weight:600;color:#1F3864"></div>
+      <div class="fg"><label>MwSt. 8.1% CHF</label>
+        <input id="f-preis-mwst" type="number" step="0.01" readonly style="color:#6B7280"></div>
+      <div class="fg col2"><label>Total inkl. MwSt. CHF</label>
+        <input id="f-preis-total" type="number" step="0.01" readonly style="font-weight:700;color:#166534;font-size:16px"></div>
+    </div>
+    <!-- hidden compat field -->
+    <input type="hidden" id="f-preis-rabatt">
+    <div class="form-grid col2 mt8">
+      <div class="fg"><label>💰 Rechnungsvermerk (z.B. Monatsrechnung Mai / Einzelrechnung)</label>
+        <input id="f-rechnung-vermerk" placeholder="z.B. Monatsrechnung Mai 2026" list="vermerk-list">
+        <datalist id="vermerk-list">
+          <option value="Monatsrechnung Januar 2026">
+          <option value="Monatsrechnung Februar 2026">
+          <option value="Monatsrechnung März 2026">
+          <option value="Monatsrechnung April 2026">
+          <option value="Monatsrechnung Mai 2026">
+          <option value="Monatsrechnung Juni 2026">
+          <option value="Monatsrechnung Juli 2026">
+          <option value="Monatsrechnung August 2026">
+          <option value="Monatsrechnung September 2026">
+          <option value="Monatsrechnung Oktober 2026">
+          <option value="Monatsrechnung November 2026">
+          <option value="Monatsrechnung Dezember 2026">
+          <option value="Einzelrechnung">
+          <option value="Sammelrechnung Q1 2026">
+          <option value="Sammelrechnung Q2 2026">
+        </datalist>
+      </div>
+      <div class="fg"><label>💳 Zahlungsstatus</label>
+        <select id="f-zahlungsstatus">
+          <option value="">— offen —</option>
+          <option value="offen">Offen</option>
+          <option value="in_rechnung">In Rechnung gestellt</option>
+          <option value="bezahlt">Bezahlt</option>
+          <option value="ueberfaellig">Überfällig</option>
+          <option value="storniert">Storniert</option>
+        </select>
       </div>
     </div>
     <div class="fg mt8"><label>Interne Bemerkung (erscheint nicht auf Lieferschein)</label><textarea id="f-bem-intern" placeholder="Bemerkungen für interne Zwecke…" style="min-height:48px"></textarea></div>
@@ -399,14 +460,19 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#F0F4F8;min-heigh
     <div class="card">
       <div class="card-title">⚙️ Nummernkreis & Tarife</div>
       <div class="form-grid">
-        <div class="fg"><label>Nächste Auftragsnummer</label><input id="s-nrnext" type="number" value="1"></div>
-        <div class="fg"><label>Nummernpräfix</label><input id="s-nrpfx" value="HT-2026-"></div>
+        <div class="fg"><label>Auftragsnummer</label>
+          <input id="s-nrnext" type="number" style="display:none">
+          <input id="s-nrpfx" style="display:none">
+          <div style="font-size:12px;color:#6B7280;padding:6px 0">Wird automatisch generiert:<br><b>HT-JJJJ-MM-KWxx-NNN</b></div>
+        </div>
         <div class="fg"><label>MwSt.-Satz (%)</label><input id="s-mwstsatz" type="number" value="8.1" step="0.1"></div>
         <div class="fg"><label>Standard Grundtarif CHF</label><input id="s-tarif" type="number" value="384" step="1"></div>
         <div class="fg"><label>Standard km-Preis CHF/km</label><input id="s-kmpreis" type="number" value="1.85" step="0.01"></div>
         <div class="fg"><label>Standard Kühlzuschlag CHF</label><input id="s-kuehlz" type="number" value="50" step="1"></div>
         <div class="fg"><label>Standard ADR-Zuschlag CHF</label><input id="s-adrz" type="number" value="80" step="1"></div>
         <div class="fg"><label>Zahlungsziel (Tage)</label><input id="s-zahlziel" type="number" value="30"></div>
+        <div class="fg"><label>Standard Treibstoffzuschlag %</label><input id="s-treibpct" type="number" value="3" step="0.1" oninput="saveSettings()"></div>
+        <div class="fg"><label>Standard Stauzuschlag %</label><input id="s-staupct" type="number" value="8" step="0.1" oninput="saveSettings()"></div>
       </div>
     </div>
   </div>
@@ -416,7 +482,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#F0F4F8;min-heigh
       <div class="fg"><label>Betreffzeile</label><input id="s-mail-betreff" value="Auftrag abgeschlossen — Hasli Transport Roat"></div>
       <div class="fg"><label>Absender-Name</label><input id="s-mail-name" value="Michael Roat | Hasli Transport Roat"></div>
     </div>
-    <div class="fg mt8"><label>Nachrichtentext (Platzhalter: {NR}, {AG}, {DATUM})</label>
+    <div class="fg mt8"><label>Nachrichtentext (Platzhalter: {NR}, {AG}, {DATUM}, {STATUS}, {VON}, {NACH})</label>
       <textarea id="s-mail-text" style="min-height:80px">Guten Tag
 
 Ihr Auftrag {NR} wurde heute ({DATUM}) erfolgreich abgeschlossen und zugestellt.
@@ -486,6 +552,114 @@ const ADR_FAKTOREN = {
   '': 1
 };
 
+
+// ── ASTAG PDF Import ──────────────────────────────────────────────────────
+function importASTAG() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/pdf,.pdf';
+  input.onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await extractPDFText(file);
+      parseASTAGText(text);
+    } catch(err) {
+      alert('Fehler beim Lesen der PDF: ' + err.message);
+    }
+  };
+  input.click();
+}
+
+async function extractPDFText(file) {
+  if (!window.pdfjsLib) {
+    await new Promise(function(resolve, reject) {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({data: arrayBuffer}).promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    fullText += content.items.map(function(item){return item.str}).join(' ') + '\n';
+  }
+  return fullText;
+}
+
+function parseASTAGText(text) {
+  function exNum(rx) {
+    const m = text.match(rx);
+    return m ? parseFloat(m[1].replace(/[' ]/g,'').replace(',','.')) : null;
+  }
+  function exStr(rx) {
+    const m = text.match(rx);
+    return m ? m[1].trim() : null;
+  }
+
+  // Parse ASTAG PDF fields
+  const vonPLZ    = exStr(/Von\s*\(PLZ\)\s*(\d+)/);
+  const zuPLZ     = exStr(/Zu\s*\(PLZ\)\s*(\d+)/);
+  const distanz   = exNum(/Distanz\s+([\d\s'.]+)\s*km/);
+  const gewicht   = exNum(/Frachtpflichtiges Gewicht\s+([\d'.]+)/);
+  const kalcGew   = exNum(/Kalkulationsgewicht\s+([\d'.]+)/);
+  const frachtsatz= exNum(/Frachtsatz\s*\/\s*100\s*kg\s+([\d'.]+)/);
+  const zwischen  = exNum(/Zwischensumme\s+([\d'.]+)/);
+  const stauPct   = exNum(/Nationaler Stauzuschlag\s+([\d'.]+)/);
+  const treibPct  = exNum(/Treibstoffzuschlag\s+([\d'.]+)\s*%/);
+  const rabattPct = exNum(/Zuschlag\s*\/\s*Rabatt\s*(-?[\d'.]+)\s*%/);
+  const netto     = exNum(/Frachtbetrag Netto\s+([\d'.]+)/);
+  const total     = exNum(/Total inkl[^0-9]+?([\d'.]+)/);
+
+  let filled = 0;
+  function fill(id, val) {
+    if (val === null || val === undefined) return;
+    const el = document.getElementById(id);
+    if (el) { el.value = typeof val === 'number' ? val : val; filled++; }
+  }
+
+  fill('f-km',         distanz ? Math.round(distanz) : null);
+  fill('f-gewicht',    kalcGew || gewicht);
+  fill('f-frachtsatz', frachtsatz);
+  fill('f-preis-basis',zwischen);
+  fill('f-stau-pct',   stauPct);
+  fill('f-treib-pct',  treibPct);
+  fill('f-rabatt-pct', rabattPct);  // e.g. -60
+
+  if (vonPLZ) {
+    const el = document.getElementById('f-abs-plz');
+    if (el && !el.value) { el.value = vonPLZ.substring(0,4); filled++; }
+  }
+  if (zuPLZ) {
+    const el = document.getElementById('f-emp-plz');
+    if (el && !el.value) { el.value = zuPLZ.substring(0,4); filled++; }
+  }
+
+  calcPreis();
+
+  const parts = [];
+  if (vonPLZ && zuPLZ) parts.push('PLZ ' + vonPLZ.substring(0,4) + ' → ' + zuPLZ.substring(0,4));
+  if (distanz) parts.push(Math.round(distanz) + ' km');
+  if (rabattPct) parts.push('Rabatt ' + rabattPct + '%');
+  if (netto) parts.push('Netto CHF ' + netto.toFixed(2));
+  if (total) parts.push('Total CHF ' + total.toFixed(2));
+
+  const msg = filled > 0
+    ? '✅ ASTAG: ' + parts.join(' | ')
+    : '⚠ Keine Daten erkannt:\n' + text.substring(0,500);
+
+  const s = document.getElementById('sync-status');
+  if (s) { s.textContent = msg; s.style.color = filled > 0 ? '#166534' : '#DC2626'; setTimeout(()=>{s.textContent='';},7000); }
+  if (filled === 0) alert(msg);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Init ──────────────────────────────────────────────────────────────────
 function loadAll() {
   try {
@@ -497,6 +671,7 @@ function loadAll() {
     cfg = rawCfg ? JSON.parse(rawCfg) : defaultCfg();
   } catch(e) { cfg = defaultCfg(); }
   applySettings();
+  loadCRMContacts();
   renderAuftraege();
   buildFakturaSelects();
 }
@@ -506,7 +681,7 @@ function defaultCfg() {
     firma:"Hasli Transport Roat", inhaber:"Michael Roat",
     str:"Rüttenestrasse 3", plz:"8554", ort:"Müllheim-Wigoltingen",
     tel:"+41 79 583 92 47", email:"michael.roat@hasli-transport.ch",
-    mwst:"", iban:"", nrnext:1, nrpfx:"HT-2026-",
+    mwst:"", iban:"", nrnext:1, nrpfx:"HT-",
     mwstsatz:8.1, tarif:384, kmpreis:1.85, kuehlz:50, adrz:80, zahlziel:30,
     mailBetreff:"Auftrag abgeschlossen — Hasli Transport Roat",
     mailName:"Michael Roat | Hasli Transport Roat",
@@ -526,6 +701,8 @@ function saveSettings() {
   cfg.iban      = v('s-iban');  cfg.nrnext   = parseInt(v('s-nrnext'))||1;
   cfg.nrpfx     = v('s-nrpfx');
   cfg.mwstsatz  = parseFloat(v('s-mwstsatz'))||8.1;
+  cfg.treibpct  = parseFloat(v('s-treibpct'))||3;
+  cfg.staupct   = parseFloat(v('s-staupct'))||8;
   cfg.tarif     = parseFloat(v('s-tarif'))||384;
   cfg.kmpreis   = parseFloat(v('s-kmpreis'))||1.85;
   cfg.kuehlz    = parseFloat(v('s-kuehlz'))||50;
@@ -562,13 +739,39 @@ function goTab(t) {
   btns.forEach(b => { if(b.getAttribute('onclick')?.includes(t)) b.classList.add('on'); });
   if (t === 'auftraege') renderAuftraege();
   if (t === 'faktura') { buildFakturaSelects(); renderFaktura(); }
-  if (t === 'neu') buildAgList();
+  if (t === 'neu') { 
+    buildAgList();
+    // Auto-generate number only for new orders (not when editing)
+    if (!editId && !document.getElementById('f-nr').value) {
+      sv('f-nr', genAuftragNr());
+    }
+  }
 }
 
 // ── Neuer Auftrag ─────────────────────────────────────────────────────────
+function getKW(date) {
+  // ISO Kalenderwoche
+  const d = new Date(date || Date.now());
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay()||7) + 1);
+  const week1 = new Date(d.getFullYear(),0,4);
+  return Math.round(((d-week1)/86400000 + (week1.getDay()||7) - 1) / 7);
+}
+
+function genAuftragNr() {
+  const now  = new Date();
+  const yyyy = now.getFullYear();
+  const mm   = String(now.getMonth()+1).padStart(2,'0');
+  const kw   = String(getKW(now)).padStart(2,'0');
+  // Format: HT + JJJJ + MM + KW + laufende Nr (4-stellig)
+  // Beispiel: HT202604161001
+  const next = auftraege.length + 1;
+  return 'HT' + yyyy + mm + kw + next;
+}
+
 function newAuftrag() {
   editId = null;
-  const nr = cfg.nrpfx + String(cfg.nrnext).padStart(3,'0');
+  const nr = genAuftragNr();
   sv('f-nr', nr);
   sv('f-datum', new Date().toISOString().split('T')[0]);
   sv('f-status', 'Entwurf');
@@ -585,6 +788,9 @@ function newAuftrag() {
   document.getElementById('f-adr').checked = false;
   toggleKuehl(); toggleADR();
   sv('f-preis-basis', cfg.tarif);
+  sv('f-treib-pct',  cfg.treibpct || 3);
+  sv('f-stau-pct',   cfg.staupct  || 8);
+  sv('f-rabatt-pct', -60);
   sv('f-km', 0);
   document.getElementById('pos-body').innerHTML = '';
   document.getElementById('adr-body').innerHTML = '';
@@ -623,6 +829,7 @@ function editAuftrag(id) {
   sv('f-preis-kuehl', a.preis?.kuehl||''); sv('f-preis-stand', a.preis?.stand||'');
   sv('f-preis-rabatt', a.preis?.rabatt||'');
   sv('f-bem-intern', a.bemIntern||''); sv('f-bem-extern', a.bemExtern||'');
+  sv('f-rechnung-vermerk', a.rechnungVermerk||''); sv('f-zahlungsstatus', a.zahlungStatus||'');
   calcPreis(); calcTotals(); calcADR();
   goTab('neu');
 }
@@ -645,7 +852,9 @@ function saveAuftrag(statusOverride) {
     preis: { basis:parseFloat(v('f-preis-basis'))||0, km:parseFloat(v('f-preis-km'))||0, kmanz:parseFloat(v('f-km'))||0, adr:parseFloat(v('f-preis-adr'))||0, kuehl:parseFloat(v('f-preis-kuehl'))||0, stand:parseFloat(v('f-preis-stand'))||0, rabatt:parseFloat(v('f-preis-rabatt'))||0, total:parseFloat(v('f-preis-total'))||0 },
     bemIntern: v('f-bem-intern'), bemExtern: v('f-bem-extern'),
     erstellt: editId ? (auftraege.find(x=>x.id===editId)?.erstellt || new Date().toISOString()) : new Date().toISOString(),
-    geaendert: new Date().toISOString()
+    geaendert: new Date().toISOString(),
+    rechnungVermerk: v('f-rechnung-vermerk'),
+    zahlungStatus: v('f-zahlungsstatus') || 'offen'
   };
   if (editId) {
     auftraege = auftraege.map(x => x.id===editId ? a : x);
@@ -656,7 +865,46 @@ function saveAuftrag(statusOverride) {
     sv('s-nrnext', cfg.nrnext);
   }
   saveAll();
+  syncAuftragToCRM(a);
   goTab('auftraege');
+}
+
+function syncAuftragToCRM(auftrag) {
+  try {
+    const crmRaw = localStorage.getItem('hasli-crm-v3');
+    if (!crmRaw) return;
+    let contacts = JSON.parse(crmRaw);
+    const firma = auftrag.ag?.firma;
+    if (!firma) return;
+    
+    const idx = contacts.findIndex(c => c.firma && c.firma.toLowerCase() === firma.toLowerCase());
+    if (idx < 0) return; // Firma nicht im CRM
+    
+    // Aufträge-Array im CRM-Kontakt
+    if (!contacts[idx].auftraege) contacts[idx].auftraege = [];
+    
+    // Bestehenden Auftrag aktualisieren oder neu hinzufügen
+    const existIdx = contacts[idx].auftraege.findIndex(a => a.nr === auftrag.nr);
+    const entry = {
+      nr: auftrag.nr,
+      datum: auftrag.datum,
+      status: auftrag.status,
+      zahlungStatus: auftrag.zahlungStatus,
+      rechnungVermerk: auftrag.rechnungVermerk,
+      von: (auftrag.abs?.plz || '') + ' ' + (auftrag.abs?.ort || ''),
+      nach: (auftrag.emp?.plz || '') + ' ' + (auftrag.emp?.ort || ''),
+      total: auftrag.preis?.total || 0,
+      geaendert: auftrag.geaendert
+    };
+    
+    if (existIdx >= 0) {
+      contacts[idx].auftraege[existIdx] = entry;
+    } else {
+      contacts[idx].auftraege.push(entry);
+    }
+    
+    localStorage.setItem('hasli-crm-v3', JSON.stringify(contacts));
+  } catch(e) { console.error('CRM sync error:', e); }
 }
 
 // ── Positionen ────────────────────────────────────────────────────────────
@@ -670,11 +918,11 @@ function addPos(data) {
   const tr = document.createElement('tr');
   tr.id = rid;
   tr.innerHTML = `
-    <td><select onchange="calcTotals()">${artOpts}</select></td>
-    <td><input type="number" value="${d.anzahl||1}" min="1" oninput="calcTotals()" style="width:60px"></td>
-    <td><input type="number" value="${d.gewicht||''}" placeholder="0" oninput="calcTotals()" style="width:80px"></td>
-    <td><input type="text" value="${d.masse||''}" placeholder="120×80×100" style="width:120px"></td>
-    <td><input type="number" step="0.01" value="${d.ldm||''}" placeholder="0.00" oninput="calcTotals()" style="width:70px"></td>
+    <td><select data-f="art" onchange="calcTotals()">${artOpts}</select></td>
+    <td><input data-f="anzahl" type="number" value="${d.anzahl||1}" min="1" oninput="calcTotals()" style="width:60px"></td>
+    <td><input data-f="gewicht" type="number" value="${d.gewicht||''}" placeholder="0" oninput="calcTotals()" style="width:80px"></td>
+    <td><input data-f="masse" type="text" value="${d.masse||''}" placeholder="120×80×100" style="width:120px"></td>
+    <td><input data-f="ldm" type="number" step="0.01" value="${d.ldm||''}" placeholder="0.00" data-auto="${d.ldm?'false':'true'}" oninput="this.setAttribute('data-auto','false');calcTotals()" style="width:70px"></td>
     <td><input type="text" value="${d.bez||''}" placeholder="Warenbeschreibung"></td>
     <td><input type="text" value="${d.ref||''}" placeholder="Lot/Ref." style="width:70px"></td>
     <td><button class="del-btn" onclick="this.closest('tr').remove();calcTotals()">✕</button></td>`;
@@ -690,21 +938,61 @@ function readPositionen() {
 }
 
 function calcTotals() {
-  let totG=0, totL=0;
+  // Lademeter-Standardwerte (LKW-Breite 2.40m, nicht stapelbar)
+  // Formel: ldm = (Länge x Breite) / 2.4 x Anzahl
+  const LDM_TABELLE = {
+    'EUR':         0.40,  // EUR-Palette 1.20 x 0.80 / 2.4 = 0.40 ldm
+    'Palette EUR': 0.40,
+    'Industrie':   0.50,  // Industriepalette 1.20 x 1.00 / 2.4 = 0.50 ldm
+    'Einweg':      0.20,  // Einwegpalette 0.80 x 0.60 / 2.4 = 0.20 ldm
+    'Halb':        0.20,  // Halbpalette 0.80 x 0.60 / 2.4 = 0.20 ldm
+  };
+
+  function getLdmPerUnit(art) {
+    const a = (art || '').toLowerCase();
+    if (a.includes('industrie'))        return 0.50;
+    if (a.includes('einweg'))           return 0.20;
+    if (a.includes('halb'))             return 0.20;
+    if (a.includes('eur') || a.includes('euro')) return 0.40;
+    if (a.includes('palette'))          return 0.40;
+    return null; // Manuell eingeben
+  }
+
+  let g = 0, l = 0;
   document.querySelectorAll('#pos-body tr').forEach(tr => {
-    const inputs = tr.querySelectorAll('input');
-    totG += (parseFloat(inputs[1].value)||0) * (parseFloat(inputs[2].value)||0) / (parseFloat(inputs[0].value)||1 || 1);
-    // Recalc: gewicht is per unit? No — just sum raw
-    totG = 0; // Reset and redo
+    const artEl  = tr.querySelector('[data-f="art"]') || tr.querySelector('select');
+    const art    = (artEl || {}).value || '';
+    const anzahl = parseFloat((tr.querySelector('[data-f="anzahl"]') || tr.querySelectorAll('input')[0] || {}).value) || 0;
+    const gewEl  = tr.querySelector('[data-f="gewicht"]') || tr.querySelectorAll('input')[1];
+    const gewicht= parseFloat((gewEl || {}).value) || 0;
+    const ldmEl  = tr.querySelector('[data-f="ldm"]') || tr.querySelectorAll('input')[3];
+    let   ldmVal = parseFloat((ldmEl || {}).value) || 0;
+
+    g += gewicht;
+
+    // Auto-Berechnung: immer wenn kein manueller Wert gesetzt wurde
+    // Erkennung: ldm-Feld hat data-auto="true" wenn automatisch berechnet
+    const isManual = ldmEl && ldmEl.getAttribute('data-auto') === 'false';
+    if (ldmEl && !isManual && anzahl > 0) {
+      const ldmPro = getLdmPerUnit(art);
+      if (ldmPro !== null) {
+        const autoLdm = anzahl * ldmPro;
+        ldmEl.value = autoLdm.toFixed(2);
+        ldmEl.setAttribute('data-auto', 'true');
+        ldmVal = autoLdm;
+      }
+    } else if (ldmEl && ldmEl.value) {
+      ldmVal = parseFloat(ldmEl.value) || 0;
+    }
+    l += ldmVal;
   });
-  let g=0, l=0;
-  document.querySelectorAll('#pos-body tr').forEach(tr => {
-    const inputs = tr.querySelectorAll('input');
-    g += parseFloat(inputs[2].value)||0;
-    l += parseFloat(inputs[4].value)||0;
-  });
-  document.getElementById('total-gewicht').textContent = g;
+
+  document.getElementById('total-gewicht').textContent = Math.round(g);
   document.getElementById('total-ldm').textContent = l.toFixed(2);
+
+  // Gewicht in Preisberechnung übertragen
+  const fGew = document.getElementById('f-gewicht');
+  if (fGew && g > 0) fGew.value = Math.round(g);
 }
 
 // ── ADR / Gefahrgut ───────────────────────────────────────────────────────
@@ -776,15 +1064,50 @@ function calcADR() {
 
 // ── Preis ─────────────────────────────────────────────────────────────────
 function calcPreis() {
-  const basis  = parseFloat(v('f-preis-basis'))||0;
-  const kmRate = parseFloat(v('f-preis-km'))||0;
-  const km     = parseFloat(v('f-km'))||0;
-  const adr    = parseFloat(v('f-preis-adr'))||0;
-  const kuehl  = parseFloat(v('f-preis-kuehl'))||0;
-  const stand  = parseFloat(v('f-preis-stand'))||0;
-  const rabatt = parseFloat(v('f-preis-rabatt'))||0;
-  const total  = basis + (kmRate*km) + adr + kuehl + stand - rabatt;
+  // ASTAG Kalkulation
+  const gewicht    = parseFloat(v('f-gewicht'))||0;
+  const frachtsatz = parseFloat(v('f-frachtsatz'))||0;
+  const km         = parseFloat(v('f-km'))||0;
+  
+  // Kalkulationsgewicht (mind. 20t wenn nicht anders)
+  const kalcGewicht = gewicht > 0 ? Math.max(gewicht, 1) : 0;
+  
+  // Zwischensumme: aus Frachtsatz berechnen ODER manuell eingegeben
+  let zwischen = parseFloat(v('f-preis-basis'))||0;
+  if (frachtsatz > 0 && kalcGewicht > 0 && zwischen === 0) {
+    zwischen = (kalcGewicht / 100) * frachtsatz;
+    sv('f-preis-basis', zwischen.toFixed(2));
+  }
+  
+  // Zuschläge %
+  const stauPct   = parseFloat(v('f-stau-pct'))||0;
+  const treibPct  = parseFloat(v('f-treib-pct'))||0;
+  const rabattPct = parseFloat(v('f-rabatt-pct'))||0;
+  
+  const stauCHF   = zwischen * stauPct / 100;
+  const treibCHF  = zwischen * treibPct / 100;
+  const rabattCHF = zwischen * rabattPct / 100; // negative = Rabatt
+  
+  // Zusatzleistungen CHF
+  const adr   = parseFloat(v('f-preis-adr'))||0;
+  const kuehl = parseFloat(v('f-preis-kuehl'))||0;
+  const stand = parseFloat(v('f-preis-stand'))||0;
+  const extra = parseFloat(v('f-preis-extra'))||0;
+  
+  // Frachtbetrag Netto
+  const netto = zwischen + stauCHF + treibCHF + rabattCHF + adr + kuehl + stand + extra;
+  const mwst  = netto * 0.081;
+  const total = netto + mwst;
+  
+  sv('f-preis-netto', netto.toFixed(2));
+  sv('f-preis-mwst',  mwst.toFixed(2));
   sv('f-preis-total', total.toFixed(2));
+  sv('f-preis-rabatt', rabattCHF.toFixed(2)); // hidden compat
+}
+
+function sv(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
 }
 
 // ── Toggle Kuehl/ADR ──────────────────────────────────────────────────────
@@ -818,6 +1141,9 @@ function renderAuftraege() {
     const totG = (a.positionen||[]).reduce((s,p)=>s+(p.gewicht||0),0);
     const totPal = (a.positionen||[]).reduce((s,p)=>s+(p.anzahl||0),0);
     const sc = 's-'+a.status.toLowerCase().replace(/\s+/g,'-').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ä/g,'a').replace(/ß/g,'ss');
+        const zStatus = a.zahlungStatus || 'offen';
+        const zLabel = {offen:'💳 Offen', in_rechnung:'📄 In Rechnung', bezahlt:'✅ Bezahlt', ueberfaellig:'⚠ Überfällig', storniert:'❌ Storniert'}[zStatus] || '';
+        const zColor = {offen:'#B45309', in_rechnung:'#1E40AF', bezahlt:'#166534', ueberfaellig:'#DC2626', storniert:'#6B7280'}[zStatus] || '#6B7280';
     return `<tr onclick="editAuftrag('${a.id}')">
       <td><b>${a.nr}</b></td>
       <td>${fmtDate(a.datum)}</td>
@@ -826,7 +1152,11 @@ function renderAuftraege() {
       <td>${totPal}</td>
       <td>${totG} kg</td>
       <td>${a.preis?.total ? 'CHF '+a.preis.total.toFixed(2) : '—'}</td>
-      <td><span class="badge ${sc}">${a.status}</span></td>
+      <td>
+        <span class="badge ${sc}">${a.status}</span>
+        ${zLabel ? `<br><span style="font-size:10px;color:${zColor};font-weight:600">${zLabel}</span>` : ''}
+        ${a.rechnungVermerk ? `<br><span style="font-size:10px;color:#6B7280">${a.rechnungVermerk}</span>` : ''}
+      </td>
       <td onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-sm" onclick="editAuftrag('${a.id}')">✏️</button>
         <button class="btn btn-ghost btn-sm" onclick="pdfLSById('${a.id}')">📄</button>
@@ -880,8 +1210,19 @@ function processScan(newStatus) {
   // E-Mail Benachrichtigung
   if (a.ag?.email) {
     setTimeout(() => {
-      const text = (cfg.mailText||'').replace('{NR}',nr).replace('{AG}',a.ag?.firma||'').replace('{DATUM}',fmtDate(new Date().toISOString().split('T')[0]));
-      const mailto = `mailto:${a.ag.email}?subject=${encodeURIComponent(cfg.mailBetreff||'Auftrag abgeschlossen')}&body=${encodeURIComponent(text)}`;
+      const heute = fmtDate(new Date().toISOString().split('T')[0]);
+      const text = (cfg.mailText||'')
+        .replace(/\{NR\}/g, nr)
+        .replace(/\{AG\}/g, a.ag?.firma||'')
+        .replace(/\{DATUM\}/g, heute)
+        .replace(/\{STATUS\}/g, newStatus)
+        .replace(/\{VON\}/g, (a.abs?.plz||'') + ' ' + (a.abs?.ort||''))
+        .replace(/\{NACH\}/g, (a.emp?.plz||'') + ' ' + (a.emp?.ort||''));
+      const betreff = (cfg.mailBetreff||'Auftrag {NR} — Hasli Transport Roat')
+        .replace(/\{NR\}/g, nr)
+        .replace(/\{DATUM\}/g, heute)
+        .replace(/\{STATUS\}/g, newStatus);
+      const mailto = `mailto:${a.ag.email}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
       if (confirm(`Benachrichtigung an ${a.ag.email} senden?`)) window.open(mailto);
     }, 500);
   }
@@ -891,6 +1232,7 @@ function processScan(newStatus) {
 // ── Faktura ───────────────────────────────────────────────────────────────
 function buildFakturaSelects() {
   const agSel = document.getElementById('fak-ag');
+  if (!agSel) return; // Tab not yet rendered
   const curAg = agSel.value;
   const ags = [...new Set(auftraege.map(a=>a.ag?.firma||'').filter(Boolean))].sort();
   agSel.innerHTML = '<option value="">Auftraggeber wählen…</option>' + ags.map(a=>`<option${a===curAg?' selected':''}>${a}</option>`).join('');
@@ -940,15 +1282,11 @@ function pdfLS() {
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({unit:'mm',format:'a4'});
   const a = collectCurrentAuftrag();
-  const half = 138; // mm, perforiert in der Mitte (148/2 - Rand)
-  renderLSPage(doc, a, 10, false); // Oben: Empfänger-Exemplar
-  doc.setLineDash([3,3],0);
-  doc.setDrawColor(150,150,150);
-  doc.line(10, half+10, 200, half+10);
-  doc.setFontSize(7); doc.setTextColor(150,150,150);
-  doc.text('✂  Hier trennen — Fahrer-Exemplar', 105, half+14, {align:'center'});
-  doc.setLineDash([],0);
-  renderLSPage(doc, a, half+18, true); // Unten: Fahrer-Exemplar
+  // Seite 1: Empfänger-Exemplar (volles A4)
+  renderLSPage(doc, a, 10, false);
+  // Seite 2: Fahrer-/Archiv-Exemplar (volles A4)
+  doc.addPage();
+  renderLSPage(doc, a, 10, true);
   doc.save(`Lieferschein-${a.nr}.pdf`);
 }
 
@@ -1040,13 +1378,12 @@ function renderLSPage(doc, a, yStart, isDriver) {
     doc.text('Bemerkung: '+a.bemExtern, 10, cy); cy+=6;
   }
 
-  // Unterschriften
-  cy = Math.max(cy+2, y+115);
+  // Unterschriften (Absender weggelassen)
+  cy = Math.max(cy+10, y+230);
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0,0,0);
-  doc.line(10,cy+8,70,cy+8); doc.line(80,cy+8,140,cy+8); doc.line(150,cy+8,200,cy+8);
-  doc.text('Absender (Datum/Unterschrift)', 10, cy+12);
-  doc.text('Empfänger (Datum/Unterschrift)', 80, cy+12);
-  doc.text('Fahrer: '+( a.fahrer||cfg.inhaber), 150, cy+12);
+  doc.line(10,cy+8,90,cy+8); doc.line(110,cy+8,200,cy+8);
+  doc.text('Empfänger (Datum/Unterschrift)', 10, cy+12);
+  doc.text('Fahrer: '+( a.fahrer||cfg.inhaber), 110, cy+12);
 }
 
 function collectCurrentAuftrag() {
@@ -1155,26 +1492,85 @@ function pdfRechnung() {
 }
 
 // ── Auftraggeber-Datalist ──────────────────────────────────────────────────
+// CRM contact lookup cache
+let crmContacts = [];
+
+function loadCRMContacts() {
+  try {
+    // Try hasli-crm-contacts (synced from CRM window)
+    const raw = localStorage.getItem('hasli-crm-contacts') 
+             || localStorage.getItem('hasli-crm-v3')
+             || localStorage.getItem('hasli-crm-v2');
+    if (raw) crmContacts = JSON.parse(raw);
+  } catch(e) {}
+}
+
 function buildAgList() {
+  loadCRMContacts();
   const dl = document.getElementById('ag-list');
   if (!dl) return;
-  // From past orders
   const fromOrders = auftraege.map(a=>a.ag?.firma||'').filter(Boolean);
-  // From CRM sync
-  let fromCRM = [];
-  try {
-    const crmRaw = localStorage.getItem('hasli-crm-contacts');
-    if (crmRaw) {
-      const contacts = JSON.parse(crmRaw);
-      fromCRM = contacts.map(c=>c.firma||'').filter(Boolean);
-    }
-  } catch(e) {}
+  const fromCRM = crmContacts.map(c=>c.firma||'').filter(Boolean);
   const ags = [...new Set([...fromOrders, ...fromCRM])].sort();
   dl.innerHTML = ags.map(a=>`<option value="${a}">`).join('');
 }
 
+function autofillFromCRM(firma) {
+  if (!firma || !crmContacts.length) return;
+  // Find contact - partial match ok
+  const q = firma.toLowerCase();
+  const contact = crmContacts.find(c => c.firma && (
+    c.firma.toLowerCase() === q || c.firma.toLowerCase().includes(q)
+  ));
+  if (!contact) return;
+
+  // Helper: set field only if currently empty or user chose from dropdown
+  function fill(id, val) {
+    const el = document.getElementById(id);
+    if (el && val && val !== '—' && val.trim()) el.value = val.trim();
+  }
+
+  // Auftraggeber fields
+  fill('f-ag-kontakt', contact.kontakt);
+  fill('f-ag-tel',     contact.tel);
+
+  // Absender = Abholort (wo Michael die Ware holt)
+  // Parse ort: may contain PLZ + Ort like "8560 Märstetten"
+  if (contact.ort) {
+    const ortMatch = contact.ort.match(/^(\d{4})\s+(.+)$/);
+    if (ortMatch) {
+      fill('f-abs-plz', ortMatch[1]);
+      fill('f-abs-ort', ortMatch[2]);
+    } else {
+      fill('f-abs-ort', contact.ort);
+    }
+  }
+  fill('f-abs-firma', contact.firma);
+
+  // Show a small confirmation
+  const status = document.getElementById('sync-status');
+  if (status) {
+    status.textContent = '✅ Daten aus CRM übernommen';
+    status.style.color = '#166534';
+    setTimeout(() => { status.textContent = ''; }, 3000);
+  }
+}
+
 // ── Druck ─────────────────────────────────────────────────────────────────
-function printLS() { window.print(); }
+function printLS() {
+  // Make sure content is visible before printing
+  const style = document.createElement('style');
+  style.id = 'print-fix';
+  style.textContent = '@media print { body { visibility: visible !important; } .no-print, button, .btn { display: none !important; } .card { break-inside: avoid; } }';
+  document.head.appendChild(style);
+  
+  window.onafterprint = () => {
+    const el = document.getElementById('print-fix');
+    if (el) el.remove();
+  };
+  
+  window.print();
+}
 
 // ── Export / Import ───────────────────────────────────────────────────────
 function exportCSV() {
